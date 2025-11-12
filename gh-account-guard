@@ -1,0 +1,863 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/gh/account-guard.yml"
+
+usage() {
+  cat <<'EOF'
+gh account-guard <command>
+
+Commands:
+  setup                Interactive setup wizard to configure profiles
+  init                 Create example config template at ~/.config/gh/account-guard.yml
+  status               Show which profile matches CWD and current gh/git identity
+  fix                  Apply matching profile to current repo (git config, signing)
+  switch               Run `gh auth switch` to the matching profile
+  install-shell-hook   Prints a shell snippet for auto-enforcement on directory change
+EOF
+}
+
+need_cmd() { command -v "$1" >/dev/null 2>&1 || { echo "Missing '$1'." >&2; exit 1; }; }
+
+# Check if optional UI tools are available and usable
+has_gum() { 
+  command -v gum >/dev/null 2>&1 && [ -t 0 ] && [ -t 1 ]
+}
+has_fzf() { 
+  # Check if fzf exists - it will handle TTY checks itself
+  command -v fzf >/dev/null 2>&1
+}
+has_fd() {
+  # fd is much faster than find for directory traversal
+  command -v fd >/dev/null 2>&1
+}
+has_bat() { command -v bat >/dev/null 2>&1; }
+
+# Recursive function to get directories (used by prompt_paths)
+get_dirs_recursive() {
+  local base_dir="$1"
+  local max_depth="${2:-3}"
+  local current_depth="${3:-0}"
+  
+  if [[ $current_depth -ge $max_depth ]]; then
+    return
+  fi
+  
+  # Output current directory
+  echo "$base_dir"
+  
+  # Get immediate subdirectories only (one level)
+  if has_fd; then
+    # Use fd - it's faster and handles paths better
+    fd -t d --max-depth 1 --base-directory "$base_dir" --hidden=false 2>/dev/null | \
+      while IFS= read -r subdir; do
+        local full_path="$base_dir/$subdir"
+        # Normalize path (remove double slashes)
+        full_path=$(echo "$full_path" | sed 's|//|/|g')
+        if [[ -d "$full_path" ]]; then
+          get_dirs_recursive "$full_path" "$max_depth" $((current_depth + 1))
+        fi
+      done
+  else
+    # Fallback to find
+    find "$base_dir" -mindepth 1 -maxdepth 1 -type d -not -path '*/\.*' 2>/dev/null | \
+      while IFS= read -r subdir; do
+        get_dirs_recursive "$subdir" "$max_depth" $((current_depth + 1))
+      done
+  fi
+}
+
+# Interactive menu with arrow keys support
+interactive_menu() {
+  local prompt_text="$1"
+  local header_text="${2:-}"
+  # If second arg looks like an option (doesn't contain "exists" or looks like menu text), treat as header
+  # Otherwise, it's the first option
+  if [[ -n "$header_text" && ("$header_text" == *"exists"* || ${#@} -gt 3) ]]; then
+    shift 2
+  else
+    # No header provided, second arg is actually first option
+    header_text=""
+    shift 1
+  fi
+  local options=("$@")
+  
+  # Combine prompt and header if header provided
+  local full_header="$prompt_text"
+  if [[ -n "$header_text" ]]; then
+    full_header="$header_text
+
+$prompt_text"
+  fi
+  
+  # Try fzf first if available (it handles TTY checks internally)
+  if has_fzf; then
+    # Use fzf for beautiful interactive selection
+    # Arrow keys: navigate, Enter: select, Esc: cancel
+    local selected
+    # Try to run fzf - it will fail gracefully if not in a TTY
+    # Exit code 130 = Esc pressed, 1 = other error
+    selected=$(printf '%s\n' "${options[@]}" | fzf --height=10 --header="$full_header" --reverse --no-multi 2>/dev/null)
+    local exit_code=$?
+    if [[ $exit_code -eq 0 && -n "$selected" ]]; then
+      echo "$selected"
+      return 0
+    elif [[ $exit_code -eq 130 ]]; then
+      # User pressed Esc - cancel
+      return 130
+    fi
+    # fzf failed for other reasons (not in TTY) - fall through to next option
+  fi
+  
+  if has_gum; then
+    # Try gum choose as fallback
+    local selected
+    selected=$(gum choose "${options[@]}" 2>&1)
+    local exit_code=$?
+    if [[ $exit_code -eq 0 && -n "$selected" ]]; then
+      echo "$selected"
+      return 0
+    elif [[ $exit_code -eq 130 ]]; then
+      # User pressed Esc/Ctrl+C - cancel
+      return 130
+    else
+      return 1
+    fi
+  else
+    # Fallback to numbered menu
+    if [[ -n "$header_text" ]]; then
+      echo "$header_text" >&2
+      echo "" >&2
+    fi
+    echo "$prompt_text" >&2
+    local i=1
+    for opt in "${options[@]}"; do
+      echo "  $i) $opt" >&2
+      ((i++))
+    done
+    local choice
+    read -p "Choose [1-$((i-1))]: " choice
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le $((${#options[@]})) ]]; then
+      echo "${options[$((choice-1))]}"
+      return 0
+    else
+      return 1
+    fi
+  fi
+}
+
+yaml_get() {
+  # requires yq (mikefarah). Keep it simple and explicit.
+  yq "$@"
+}
+
+match_profile() {
+  local dir="${1:-$PWD}"
+  local best=""
+  local best_len=0
+
+  # Iterate profiles and choose the longest matching glob
+  local n
+  n=$(yaml_get '.profiles | length' "$CONFIG" 2>/dev/null || echo 0)
+  for ((i=0; i<n; i++)); do
+    # Check if path is an array (multiple paths) or a string (single path)
+    local path_type
+    path_type=$(yaml_get ".profiles[$i].path | type" "$CONFIG" 2>/dev/null || echo "!!str")
+    
+    if [[ "$path_type" == *"seq"* ]] || [[ "$path_type" == *"array"* ]]; then
+      # Multiple paths - check each one
+      local path_count
+      path_count=$(yaml_get ".profiles[$i].path | length" "$CONFIG" 2>/dev/null || echo 0)
+      for ((j=0; j<path_count; j++)); do
+        local pattern
+        pattern=$(yaml_get ".profiles[$i].path[$j]" "$CONFIG")
+        if [[ -n "$pattern" ]]; then
+          # Expand ~
+          pattern=${pattern/#\~/$HOME}
+          if [[ "$dir" == $pattern* ]]; then
+            local len=${#pattern}
+            if (( len > best_len )); then
+              best_len=$len
+              best=$i
+            fi
+          fi
+        fi
+      done
+    else
+      # Single path (backward compatibility)
+      local pattern
+      pattern=$(yaml_get ".profiles[$i].path" "$CONFIG")
+      if [[ -n "$pattern" ]]; then
+        # Expand ~
+        pattern=${pattern/#\~/$HOME}
+        if [[ "$dir" == $pattern* ]]; then
+          local len=${#pattern}
+          if (( len > best_len )); then
+            best_len=$len
+            best=$i
+          fi
+        fi
+      fi
+    fi
+  done
+
+  echo "${best:-}"
+}
+
+prompt() {
+  local prompt_text="$1"
+  local default_value="${2:-}"
+  local result=""
+  
+  if has_gum; then
+    if [[ -n "$default_value" ]]; then
+      result=$(gum input --placeholder "$default_value" --prompt "$prompt_text: " --value "$default_value" 2>&1)
+      if [[ $? -ne 0 || -z "$result" ]]; then
+        # gum failed, fall back to basic prompt
+        read -p "$prompt_text [$default_value]: " result
+        echo "${result:-$default_value}"
+      else
+        echo "${result:-$default_value}"
+      fi
+    else
+      result=$(gum input --prompt "$prompt_text: " 2>&1)
+      if [[ $? -ne 0 ]]; then
+        # gum failed, fall back to basic prompt
+        while [[ -z "$result" ]]; do
+          read -p "$prompt_text: " result
+        done
+        echo "$result"
+      else
+        while [[ -z "$result" ]]; do
+          result=$(gum input --prompt "$prompt_text: " 2>&1)
+          if [[ $? -ne 0 ]]; then
+            read -p "$prompt_text: " result
+          fi
+        done
+        echo "$result"
+      fi
+    fi
+  else
+    # Fallback to basic prompt
+    if [[ -n "$default_value" ]]; then
+      read -p "$prompt_text [$default_value]: " result
+      echo "${result:-$default_value}"
+    else
+      while [[ -z "$result" ]]; do
+        read -p "$prompt_text: " result
+      done
+      echo "$result"
+    fi
+  fi
+}
+
+prompt_paths() {
+  local prompt_text="$1"
+  local result=""
+  
+  if has_fzf; then
+    echo ""
+    echo "💡 Opening interactive directory browser..."
+    echo "   Starting from home directory (~)"
+    echo "   Use arrow keys to navigate, Tab to select multiple, Enter to confirm"
+    echo "   Press Esc to skip and type paths manually"
+    echo ""
+    
+    # Build directory list starting from home
+    # Show home directory and its immediate children (2-3 levels deep for better navigation)
+    local dir_list=""
+    
+    # Always include home directory
+    dir_list="$HOME"
+    
+    # Get directories up to 4-5 levels deep from home so you can see nested paths
+    # This allows selecting paths like ~/personal/gh-account-guard directly
+    if has_fd; then
+      # Use fd - much faster, get directories up to 5 levels deep
+      # Limit to reasonable number for performance
+      local home_dirs
+      home_dirs=$(fd -t d --max-depth 5 --base-directory "$HOME" --hidden=false 2>/dev/null | head -500)
+      if [[ -n "$home_dirs" ]]; then
+        # Prepend HOME to each relative path
+        while IFS= read -r dir; do
+          if [[ -n "$dir" ]]; then
+            # fd returns relative paths when using --base-directory
+            dir_list+=$'\n'"$HOME/$dir"
+          fi
+        done <<< "$home_dirs"
+      fi
+    else
+      # Fallback to find - get up to 5 levels deep, limit results
+      local home_dirs
+      home_dirs=$(find "$HOME" -mindepth 1 -maxdepth 5 -type d -not -path '*/\.*' 2>/dev/null | head -500)
+      if [[ -n "$home_dirs" ]]; then
+        dir_list+=$'\n'"$home_dirs"
+      fi
+    fi
+    
+    # Add common directories that might be outside home (just top level)
+    for common_dir in "/opt" "/usr/local"; do
+      if [[ -d "$common_dir" ]]; then
+        dir_list+=$'\n'"$common_dir"
+      fi
+    done
+    
+    # Remove duplicates and sort, filter empty lines, normalize paths
+    dir_list=$(echo "$dir_list" | grep -v '^$' | sed 's|//|/|g' | sort -u)
+    
+    # Verify we have directories - if empty, something went wrong
+    if [[ -z "$dir_list" ]]; then
+      # Fallback: just use home
+      dir_list="$HOME"
+    fi
+    
+    # Try fzf directory picker with multi-select
+    # Important: fzf needs to read from /dev/tty directly for keyboard input
+    local fzf_output
+    fzf_output=$(mktemp)
+    local dir_list_file
+    dir_list_file=$(mktemp)
+    
+    # Ensure we have directories to show
+    if [[ -z "$dir_list" ]]; then
+      dir_list="$HOME"
+    fi
+    
+    # Write directory list to temp file (ensures proper newline handling)
+    echo "$dir_list" > "$dir_list_file"
+    
+    # Run fzf with explicit TTY access
+    # Read from file, write to output file, use /dev/tty for interaction
+    # Show full path in preview, but display only directory name in list for cleaner UI
+    fzf --multi --height=15 \
+      --header="$prompt_text (Tab: select multiple, Enter: confirm, Esc: type manually)" \
+      --preview='echo "Full Path: {}"; echo ""; echo "Subdirectories:"; find {} -mindepth 1 -maxdepth 1 -type d -not -path "*/\.*" 2>/dev/null | head -10 | sed "s|^|  |" || echo "  (none)"; echo ""; echo "Files:"; ls -lh {} 2>/dev/null | head -10 || echo "Directory contents unavailable"' \
+      --preview-window=right:45% \
+      --bind='ctrl-/:toggle-preview' \
+      --delimiter='/' \
+      --nth=-1 \
+      --reverse \
+      --ansi < "$dir_list_file" > "$fzf_output" 2>/dev/tty
+    
+    local fzf_exit=$?
+    local selected_paths=""
+    if [[ -f "$fzf_output" ]]; then
+      selected_paths=$(cat "$fzf_output")
+    fi
+    
+    # Cleanup temp files
+    rm -f "$fzf_output" "$dir_list_file"
+    if [[ $fzf_exit -eq 0 && -n "$selected_paths" ]]; then
+      # Convert newline-separated paths to comma-separated
+      result=$(echo "$selected_paths" | tr '\n' ',' | sed 's/,$//')
+      echo ""
+      echo "✅ Selected: $result"
+      echo "$result"
+      return 0
+    elif [[ $fzf_exit -eq 130 ]]; then
+      # User pressed Esc - fall through to manual input
+      echo ""
+      echo "Skipping browser, enter paths manually..."
+    fi
+    # fzf failed (no TTY or other error) - fall through to manual input silently
+  fi
+  
+  # Fallback to manual input
+  echo ""
+  read -p "$prompt_text: " result
+  echo "$result"
+}
+
+prompt_optional() {
+  local prompt_text="$1"
+  local default_value="${2:-}"
+  local result=""
+  
+  if has_gum; then
+    if [[ -n "$default_value" ]]; then
+      result=$(gum input --placeholder "Press Enter to skip" --prompt "$prompt_text: " --value "$default_value" 2>&1)
+      if [[ $? -ne 0 ]]; then
+        # gum failed, fall back to basic prompt
+        read -p "$prompt_text [$default_value] (press Enter to skip): " result
+        echo "${result:-$default_value}"
+      else
+        echo "${result:-$default_value}"
+      fi
+    else
+      result=$(gum input --placeholder "Press Enter to skip" --prompt "$prompt_text: " 2>&1)
+      if [[ $? -ne 0 ]]; then
+        # gum failed, fall back to basic prompt
+        read -p "$prompt_text (press Enter to skip): " result
+        echo "${result:-}"
+      else
+        echo "${result:-}"
+      fi
+    fi
+  else
+    # Fallback to basic prompt
+    if [[ -n "$default_value" ]]; then
+      read -p "$prompt_text [$default_value] (press Enter to skip): " result
+      echo "${result:-$default_value}"
+    else
+      read -p "$prompt_text (press Enter to skip): " result
+      echo "${result:-}"
+    fi
+  fi
+}
+
+prompt_yesno() {
+  local prompt_text="$1"
+  local default="${2:-n}"
+  
+  if has_gum; then
+    if [[ "$default" == "y" ]]; then
+      gum confirm "$prompt_text" --default=true 2>&1
+      local exit_code=$?
+      if [[ $exit_code -ne 0 && $exit_code -ne 1 ]]; then
+        # gum failed (not just user said no), fall back to basic prompt
+        local result=""
+        read -p "$prompt_text [Y/n]: " result
+        [[ "${result:-y}" =~ ^[Yy] ]]
+      else
+        return $exit_code
+      fi
+    else
+      gum confirm "$prompt_text" --default=false 2>&1
+      local exit_code=$?
+      if [[ $exit_code -ne 0 && $exit_code -ne 1 ]]; then
+        # gum failed (not just user said no), fall back to basic prompt
+        local result=""
+        read -p "$prompt_text [y/N]: " result
+        [[ "${result:-n}" =~ ^[Yy] ]]
+      else
+        return $exit_code
+      fi
+    fi
+  else
+    # Fallback to basic prompt
+    local result=""
+    if [[ "$default" == "y" ]]; then
+      read -p "$prompt_text [Y/n]: " result
+      if [[ "${result:-y}" =~ ^[Yy] ]]; then
+        return 0
+      else
+        return 1
+      fi
+    else
+      read -p "$prompt_text [y/N]: " result
+      if [[ "${result:-n}" =~ ^[Yy] ]]; then
+        return 0
+      else
+        return 1
+      fi
+    fi
+  fi
+}
+
+add_profile_to_config() {
+  local profile_name="$1"
+  local profile_path="$2"  # Can be "__MULTIPLE__" or a single path
+  local gh_username="$3"
+  local git_name="$4"
+  local git_email="$5"
+  local signing_key="$6"
+  local gpgsign="$7"
+  local gpgformat="$8"
+  local remote_match="$9"
+  shift 9
+  local profile_paths_array=("$@")  # Array of paths if multiple
+
+  need_cmd yq
+
+  # If config doesn't exist, create it with empty profiles array
+  if [[ ! -f "$CONFIG" ]]; then
+    mkdir -p "$(dirname "$CONFIG")"
+    echo "# Map local paths (prefix-glob) to profiles." > "$CONFIG"
+    echo "# Longest matching path wins." >> "$CONFIG"
+    echo "# Path can be a string (single path) or array (multiple paths)." >> "$CONFIG"
+    echo "profiles: []" >> "$CONFIG"
+  fi
+
+  # Create a temporary file with the new profile in YAML format
+  local temp_profile
+  temp_profile=$(mktemp)
+  cat > "$temp_profile" <<YAML
+name: "$profile_name"
+gh_username: "$gh_username"
+git:
+  name: "$git_name"
+  email: "$git_email"
+  signingkey: "$signing_key"
+  gpgsign: $gpgsign
+  gpgformat: "$gpgformat"
+YAML
+  
+  # Handle paths - single or multiple
+  if [[ "$profile_path" == "__MULTIPLE__" && ${#profile_paths_array[@]} -gt 0 ]]; then
+    # Multiple paths - store as YAML array
+    echo "path:" >> "$temp_profile"
+    for path in "${profile_paths_array[@]}"; do
+      echo "  - \"$path\"" >> "$temp_profile"
+    done
+  else
+    # Single path
+    echo "path: \"$profile_path\"" >> "$temp_profile"
+  fi
+  
+  if [[ -n "$remote_match" ]]; then
+    echo "remote_match: \"$remote_match\"" >> "$temp_profile"
+  fi
+
+  # Add the profile to the config using yq
+  # Read existing config, append new profile, write back
+  yq eval ".profiles += [load(\"$temp_profile\")]" "$CONFIG" > "${CONFIG}.tmp" && \
+    mv "${CONFIG}.tmp" "$CONFIG"
+
+  rm -f "$temp_profile"
+}
+
+collect_profile_info() {
+  local profile_num="$1"
+  local default_name="$2"
+  
+  echo ""
+  if has_gum; then
+    gum style --foreground 212 --bold "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    gum style --foreground 212 --bold "📋 Profile $profile_num"
+    gum style --foreground 212 --bold "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  else
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "📋 Profile $profile_num"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  fi
+  
+  local profile_name
+  profile_name=$(prompt "Profile name (e.g., work, personal, client1)" "$default_name")
+  
+  echo ""
+  echo "Enter paths for this profile. You can specify:"
+  echo "  - Parent folders (e.g., ~/work/company/) - matches all repos inside"
+  echo "  - Individual repos (e.g., ~/work/company/specific-repo)"
+  echo ""
+  echo "💡 To add multiple paths, separate them with commas:"
+  echo "   Example: ~/work/company/,~/work/client/,~/personal/project"
+  echo ""
+  local profile_paths_input
+  profile_paths_input=$(prompt_paths "Repos paths (comma-separated for multiple)")
+  local paths_exit=$?
+  
+  # Handle Esc cancellation
+  if [[ $paths_exit -eq 130 ]]; then
+    echo "Cancelled."
+    exit 0
+  fi
+  
+  # Convert comma-separated paths to array
+  local profile_paths=()
+  IFS=',' read -ra ADDR <<< "$profile_paths_input"
+  for path in "${ADDR[@]}"; do
+    # Trim whitespace
+    path=$(echo "$path" | xargs)
+    if [[ -n "$path" ]]; then
+      profile_paths+=("$path")
+    fi
+  done
+  
+  # If only one path, use it as string for backward compatibility
+  # If multiple paths, we'll store as array
+  local profile_path
+  if [[ ${#profile_paths[@]} -eq 1 ]]; then
+    profile_path="${profile_paths[0]}"
+  elif [[ ${#profile_paths[@]} -gt 1 ]]; then
+    # Multiple paths - will be stored as YAML array
+    profile_path="__MULTIPLE__"
+  else
+    echo "Error: At least one path is required." >&2
+    exit 1
+  fi
+  
+  local gh_username
+  gh_username=$(prompt "GitHub username for this profile" "")
+  
+  local git_name
+  git_name=$(prompt "Git name" "$gh_username")
+  
+  local git_email
+  git_email=$(prompt "Git email" "")
+  
+  echo ""
+  echo "Remote URL pattern helps validate repos match the expected account/organization."
+  echo "Examples:"
+  echo "  - For GitHub Enterprise: 'github.enterprise.com' (matches entire enterprise)"
+  echo "  - For specific org: 'github.com/YourOrg/'"
+  echo "  - Leave empty to skip remote validation"
+  local remote_match
+  remote_match=$(prompt_optional "Remote URL pattern" "")
+  
+  local signing_key=""
+  local gpgsign="false"
+  local gpgformat="ssh"
+  if prompt_yesno "Enable commit signing for this profile?" "n"; then
+    signing_key=$(prompt_optional "Signing key (SSH key or GPG key ID)" "")
+    if prompt_yesno "Use GPG format instead of SSH?" "n"; then
+      gpgformat="gpg"
+    fi
+    gpgsign="true"
+  fi
+
+  # Pass paths array if multiple, otherwise single path
+  if [[ "$profile_path" == "__MULTIPLE__" ]]; then
+    add_profile_to_config "$profile_name" "$profile_path" "$gh_username" "$git_name" "$git_email" "$signing_key" "$gpgsign" "$gpgformat" "$remote_match" "${profile_paths[@]}"
+  else
+    add_profile_to_config "$profile_name" "$profile_path" "$gh_username" "$git_name" "$git_email" "$signing_key" "$gpgsign" "$gpgformat" "$remote_match"
+  fi
+  
+  echo "$profile_name"
+}
+
+cmd_setup() {
+  mkdir -p "$(dirname "$CONFIG")"
+  
+  local overwrite=false
+  local add_mode=false
+  
+  if [[ -e "$CONFIG" ]]; then
+    local choice
+    choice=$(interactive_menu "What would you like to do?" "Config already exists at $CONFIG" \
+      "Add a new profile (keep existing)" \
+      "Start fresh (overwrite existing config)" \
+      "Cancel")
+    local menu_exit=$?
+    
+    if [[ $menu_exit -eq 130 ]] || [[ -z "$choice" ]]; then
+      echo "Cancelled."
+      exit 0
+    fi
+    
+    case "$choice" in
+      "Add a new profile"*) add_mode=true ;;
+      "Start fresh"*) overwrite=true ;;
+      "Cancel"*) echo "Cancelled."; exit 0 ;;
+      *) echo "Invalid choice. Cancelled."; exit 1 ;;
+    esac
+  fi
+
+  if [[ "$overwrite" == true ]]; then
+    rm -f "$CONFIG"
+  fi
+
+  if has_gum; then
+    gum style --foreground 212 --bold "🔧 gh-account-guard Interactive Setup"
+    echo ""
+    gum style "This wizard will help you configure your GitHub account profiles."
+    gum style "You can add multiple profiles (work, personal, clients, etc.)"
+    echo ""
+  else
+    echo "🔧 gh-account-guard Interactive Setup"
+    echo ""
+    echo "This wizard will help you configure your GitHub account profiles."
+    echo "You can add multiple profiles (work, personal, clients, etc.)"
+    echo ""
+  fi
+
+  local profile_num=1
+  local profile_names=()
+  
+  while true; do
+    local default_name
+    if [[ $profile_num -eq 1 ]]; then
+      default_name="work"
+    elif [[ $profile_num -eq 2 ]]; then
+      default_name="personal"
+    else
+      default_name="profile$profile_num"
+    fi
+    
+    local profile_name
+    profile_name=$(collect_profile_info "$profile_num" "$default_name")
+    profile_names+=("$profile_name")
+    
+    echo ""
+    if has_gum; then
+      gum style --foreground 10 "✅ Profile '$profile_name' added!"
+    else
+      echo "✅ Profile '$profile_name' added!"
+    fi
+    echo ""
+    
+    if ! prompt_yesno "Add another profile?" "n"; then
+      break
+    fi
+    
+    profile_num=$((profile_num + 1))
+  done
+
+  echo ""
+  if has_gum; then
+    gum spin --spinner dot --title "Saving configuration..." -- sleep 0.5 2>/dev/null || true
+    gum style --foreground 10 "✅ Configuration saved to $CONFIG"
+  else
+    echo "✅ Configuration saved to $CONFIG"
+  fi
+  echo ""
+  if has_gum; then
+    gum style --bold "Profiles configured: ${profile_names[*]}"
+  else
+    echo "Profiles configured: ${profile_names[*]}"
+  fi
+  echo ""
+  echo "Next steps:"
+  echo "  1. Make sure all GitHub accounts are logged in:"
+  for name in "${profile_names[@]}"; do
+    local gh_user
+    gh_user=$(yq ".profiles[] | select(.name == \"$name\") | .gh_username" "$CONFIG" 2>/dev/null || echo "")
+    if [[ -n "$gh_user" && "$gh_user" != "null" ]]; then
+      echo "     gh auth login -u $gh_user"
+    fi
+  done
+  echo "  2. Test it in a repo:"
+  echo "     cd <some-repo>"
+  echo "     gh account-guard status"
+  echo "     gh account-guard fix"
+  echo "     gh account-guard switch"
+}
+
+cmd_init() {
+  mkdir -p "$(dirname "$CONFIG")"
+  if [[ -e "$CONFIG" ]]; then
+    echo "Config already exists at $CONFIG"
+    echo "Run 'gh account-guard setup' for interactive setup, or edit the file directly."
+    exit 0
+  fi
+  cat > "$CONFIG" <<'YAML'
+# Map local paths (prefix-glob) to profiles.
+# Longest matching path wins.
+# Run 'gh account-guard setup' for interactive configuration.
+profiles:
+  - name: company
+    path: ~/work/company/            # Update with your company repos path
+    gh_username: yourcompany-username # Update with your company GitHub username
+    git:
+      name: "Your Name"
+      email: "you@company.com"        # Update with your company email
+      signingkey: ""                  # Optional: SSH or GPG signing key
+      gpgsign: false
+      gpgformat: ssh
+    remote_match: "github.com/YourCompany/"  # Optional: remote URL pattern
+  - name: personal
+    path: ~/                           # Default: matches everything else
+    gh_username: yourpersonal-username # Update with your personal GitHub username
+    git:
+      name: "Your Name (Personal)"
+      email: "you+personal@example.com"  # Update with your personal email
+      signingkey: ""                      # Optional: SSH or GPG signing key
+      gpgsign: false
+      gpgformat: ssh
+YAML
+  echo "✅ Created example config at $CONFIG"
+  echo ""
+  echo "Edit the file directly, or run 'gh account-guard setup' for interactive setup."
+}
+
+cmd_status() {
+  [[ -f "$CONFIG" ]] || { echo "No config at $CONFIG. Run: gh account-guard setup"; exit 1; }
+  idx=$(match_profile "$PWD")
+  if [[ -z "$idx" ]]; then
+    echo "No matching profile for $PWD"
+    exit 1
+  fi
+  name=$(yaml_get ".profiles[$idx].name" "$CONFIG")
+  gh_u=$(yaml_get ".profiles[$idx].gh_username" "$CONFIG")
+  echo "Matched profile: $name (gh user: $gh_u)"
+  echo "Current gh auth:"
+  gh auth status || true
+  echo
+  echo "Current git identity:"
+  echo "  user.name  = $(git config --get user.name || echo '<unset>')"
+  echo "  user.email = $(git config --get user.email || echo '<unset>')"
+  echo "  gpgsign    = $(git config --get commit.gpgsign || echo '<unset>')"
+}
+
+cmd_fix() {
+  need_cmd yq
+  [[ -d .git ]] || { echo "Not a git repo."; exit 1; }
+  idx=$(match_profile "$PWD") || true
+  [[ -n "$idx" ]] || { echo "No matching profile for $PWD"; exit 1; }
+
+  name=$(yaml_get ".profiles[$idx].git.name" "$CONFIG")
+  email=$(yaml_get ".profiles[$idx].git.email" "$CONFIG")
+  skey=$(yaml_get ".profiles[$idx].git.signingkey" "$CONFIG")
+  gpgf=$(yaml_get ".profiles[$idx].git.gpgformat" "$CONFIG")
+  gpgs=$(yaml_get ".profiles[$idx].git.gpgsign" "$CONFIG")
+  rmatch=$(yaml_get ".profiles[$idx].remote_match" "$CONFIG" 2>/dev/null || echo "")
+
+  if [[ -n "$rmatch" ]]; then
+    remote=$(git config --get remote.origin.url || echo "")
+    if [[ -n "$remote" && "$remote" != *"$rmatch"* ]]; then
+      echo "⚠️  Remote '$remote' does not match '$rmatch' for this profile."
+    fi
+  fi
+
+  git config --local user.name  "$name"
+  git config --local user.email "$email"
+  [[ -n "$skey" ]] && git config --local user.signingkey "$skey"
+  [[ -n "$gpgf" ]] && git config --local gpg.format "$gpgf"
+  [[ -n "$gpgs" ]] && git config --local commit.gpgsign "$gpgs"
+
+  echo "✅ Set repo identity to: $name <$email>; signing=$(git config --get commit.gpgsign)"
+}
+
+cmd_switch() {
+  need_cmd yq
+  idx=$(match_profile "$PWD") || true
+  [[ -n "$idx" ]] || { echo "No matching profile for $PWD"; exit 1; }
+  gh_u=$(yaml_get ".profiles[$idx].gh_username" "$CONFIG")
+  if [[ -z "$gh_u" || "$gh_u" == "null" ]]; then
+    echo "No gh_username configured for this profile."
+    exit 1
+  fi
+  gh auth switch -u "$gh_u"
+}
+
+cmd_install_shell_hook() {
+  cat <<'SH'
+# --- gh-account-guard shell hook ---
+# Add to your shell rc (zshrc, bashrc) or as a Starship pre_cmd hook.
+function __gh_account_guard_chpwd() {
+  command -v gh >/dev/null || return
+  # Only run inside a git repo
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return
+  # Enforce git identity & switch gh account
+  gh account-guard fix >/dev/null 2>&1 || true
+  gh account-guard switch >/dev/null 2>&1 || true
+}
+# zsh:
+autoload -U add-zsh-hook 2>/dev/null && add-zsh-hook chpwd __gh_account_guard_chpwd
+# bash:
+PROMPT_COMMAND="__gh_account_guard_chpwd; $PROMPT_COMMAND"
+# fish (add to ~/.config/fish/config.fish):
+function __gh_account_guard_pwd --on-variable PWD
+  command -v gh >/dev/null; or return
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1; or return
+  gh account-guard fix >/dev/null 2>&1; or true
+  gh account-guard switch >/dev/null 2>&1; or true
+end
+# --- end gh-account-guard hook ---
+SH
+}
+
+main() {
+  sub="${1:-}"; shift || true
+  case "$sub" in
+    setup) cmd_setup "$@";;
+    init) cmd_init "$@";;
+    status) cmd_status "$@";;
+    fix) cmd_fix "$@";;
+    switch) cmd_switch "$@";;
+    install-shell-hook) cmd_install_shell_hook "$@";;
+    ""|-h|--help|help) usage;;
+    *) echo "Unknown command: $sub" >&2; usage; exit 1;;
+  esac
+}
+main "$@"
+
