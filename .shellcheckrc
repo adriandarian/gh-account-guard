@@ -1,0 +1,19 @@
+# ShellCheck configuration for gh-account-guard
+
+# Disable warnings that are acceptable for this project
+# SC1090: Can't follow non-constant source
+# SC1091: Not following: source was not found
+# SC2034: Variable appears unused
+# SC2155: Declare and assign separately
+# SC2086: Double quote to prevent globbing
+# SC2046: Quote this to prevent word splitting
+
+# We use dynamic sourcing in some places
+disable=SC1090,SC1091
+
+# Allow unused variables in some cases (like test fixtures)
+# disable=SC2034
+
+# Allow command substitution without quotes in some cases
+# disable=SC2086
+

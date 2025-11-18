@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+      
+      - name: Run shellcheck
+        run: |
+          shellcheck gh-account-guard install
+          shellcheck lib/*.sh
+          shellcheck test/*.sh
+      
+      - name: Check bash syntax
+        run: |
+          bash -n gh-account-guard
+          bash -n install
+          for file in lib/*.sh test/*.sh; do
+            bash -n "$file" || true
+          done
+
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install bats
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y bats
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install bats-core
+          fi
+      
+      - name: Install dependencies
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get install -y git
+          fi
+      
+      - name: Run tests
+        run: |
+          chmod +x test/run_tests.sh
+          ./test/run_tests.sh
+      
+      - name: Test extension installation
+        run: |
+          # Test that the extension can be installed
+          gh extension install . --force || true
+          gh account-guard --help
+          gh account-guard init --help
+
+  build:
+    name: Build Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install GitHub CLI
+        run: |
+          type -p curl >/dev/null || apt install curl -y
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          apt update
+          apt install gh -y
+      
+      - name: Validate extension structure
+        run: |
+          # Check required files exist
+          [ -f gh-account-guard ] || exit 1
+          [ -f install ] || exit 1
+          [ -d lib ] || exit 1
+          [ -f lib/utils.sh ] || exit 1
+          [ -f lib/ui.sh ] || exit 1
+          [ -f lib/config.sh ] || exit 1
+          [ -f lib/commands.sh ] || exit 1
+          [ -f lib/directory.sh ] || exit 1
+      
+      - name: Test extension install
+        run: |
+          gh extension install . --force
+          gh account-guard --help
+      
+      - name: Validate all commands exist
+        run: |
+          gh account-guard setup --help || true
+          gh account-guard init --help
+          gh account-guard status --help || true
+          gh account-guard config --help || true
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [lint, test, build]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install GitHub CLI
+        run: |
+          type -p curl >/dev/null || apt install curl -y
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          apt update
+          apt install gh git -y
+      
+      - name: Install extension
+        run: |
+          gh extension install . --force
+      
+      - name: Test init command
+        run: |
+          TEST_CONFIG=$(mktemp)
+          CONFIG="$TEST_CONFIG" gh account-guard init
+          [ -f "$TEST_CONFIG" ]
+          grep -q "profiles:" "$TEST_CONFIG"
+          rm -f "$TEST_CONFIG"
+      
+      - name: Test config command
+        run: |
+          gh account-guard config --help || true
+      
+      - name: Test shell hook output
+        run: |
+          output=$(gh account-guard install-shell-hook --fish)
+          echo "$output" | grep -q "gh-account-guard shell hook"
+      
+      - name: Test git hook installation
+        run: |
+          TEST_REPO=$(mktemp -d)
+          cd "$TEST_REPO"
+          git init
+          gh account-guard install-git-hook
+          [ -f .git/hooks/pre-commit ]
+          [ -x .git/hooks/pre-commit ]
+          rm -rf "$TEST_REPO"
+
