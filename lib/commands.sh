@@ -662,6 +662,8 @@ cmd_auto_enforce() {
   current_email=$(git config --get user.email 2>/dev/null || echo "")
   current_gpgsign=$(git config --get commit.gpgsign 2>/dev/null || echo "false")
   
+  # Always ensure git identity matches profile (this is per-repo, safe to auto-set)
+  # This enables automatic commits/pushes without manual intervention
   if [[ "$current_name" != "$git_name" ]] || \
      [[ "$current_email" != "$git_email" ]] || \
      [[ "$current_gpgsign" != "$gpgs" ]]; then
@@ -1355,12 +1357,15 @@ cmd_install_shell_hook() {
     fish)
       cat <<'FISH'
 # --- gh-account-guard shell hook ---
-# This automatically enforces the correct profile when you change directories.
+# This automatically enforces the correct git identity when you change directories.
+# Git commits/pushes use git config (per-repo), so this enables automatic commits
+# without manual credential switching. Works even when multiple editors are open.
 function __gh_account_guard_pwd --on-variable PWD
   command -v gh >/dev/null; or return
+  # Set git config per-repo automatically (safe - each repo has its own config)
   gh account-guard auto-enforce >/dev/null 2>&1; or true
 end
-# Run on shell startup
+# Run on shell startup (when opening terminal in editor)
 __gh_account_guard_pwd
 
 # Alias for convenience
@@ -1371,13 +1376,16 @@ FISH
     zsh)
       cat <<'ZSH'
 # --- gh-account-guard shell hook ---
-# This automatically enforces the correct profile when you change directories.
+# This automatically enforces the correct git identity when you change directories.
+# Git commits/pushes use git config (per-repo), so this enables automatic commits
+# without manual credential switching. Works even when multiple editors are open.
 function __gh_account_guard_chpwd() {
   command -v gh >/dev/null || return
+  # Set git config per-repo automatically (safe - each repo has its own config)
   gh account-guard auto-enforce >/dev/null 2>&1 || true
 }
 autoload -U add-zsh-hook 2>/dev/null && add-zsh-hook chpwd __gh_account_guard_chpwd
-# Also run on shell startup
+# Also run on shell startup (when opening terminal in editor)
 __gh_account_guard_chpwd
 
 # Alias for convenience
@@ -1388,9 +1396,12 @@ ZSH
     bash)
       cat <<'BASH'
 # --- gh-account-guard shell hook ---
-# This automatically enforces the correct profile when you change directories.
+# This automatically enforces the correct git identity when you change directories.
+# Git commits/pushes use git config (per-repo), so this enables automatic commits
+# without manual credential switching. Works even when multiple editors are open.
 function __gh_account_guard_chpwd() {
   command -v gh >/dev/null || return
+  # Set git config per-repo automatically (safe - each repo has its own config)
   gh account-guard auto-enforce >/dev/null 2>&1 || true
 }
 PROMPT_COMMAND="__gh_account_guard_chpwd; $PROMPT_COMMAND"
