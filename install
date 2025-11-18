@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Install script for gh-account-guard extension
+# This runs automatically when the extension is installed via 'gh extension install'
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source the commands module to use cmd_create_alias
+source "${SCRIPT_DIR}/lib/utils.sh"
+source "${SCRIPT_DIR}/lib/commands.sh"
+
+echo "🔧 Setting up gh-account-guard extension..."
+
+# Create the alias automatically
+if command -v gh >/dev/null 2>&1; then
+  # Check if alias already exists
+  existing_alias=$(gh alias list 2>/dev/null | grep -E "^ag[[:space:]]*:" || echo "")
+  
+  if [[ -n "$existing_alias" ]]; then
+    if echo "$existing_alias" | grep -q "account-guard"; then
+      echo "✅ Alias 'gh ag' already exists"
+    else
+      echo "⚠️  Alias 'ag' already exists but points elsewhere, skipping alias creation"
+      echo "   Run 'gh account-guard create-alias' manually if you want to set it up"
+    fi
+  else
+    # Create the alias
+    if gh alias set ag 'account-guard' >/dev/null 2>&1; then
+      echo "✅ Created alias 'gh ag' -> 'gh account-guard'"
+    else
+      # Verify it was created (gh alias set may return non-zero even on success)
+      existing_alias=$(gh alias list 2>/dev/null | grep -E "^ag[[:space:]]*:" || echo "")
+      if [[ -n "$existing_alias" ]] && echo "$existing_alias" | grep -q "account-guard"; then
+        echo "✅ Created alias 'gh ag' -> 'gh account-guard'"
+      else
+        echo "⚠️  Could not create alias automatically"
+        echo "   Run 'gh account-guard create-alias' manually to set it up"
+      fi
+    fi
+  fi
+else
+  echo "⚠️  gh CLI not found, skipping alias creation"
+fi
+
+echo ""
+echo "✅ Installation complete!"
+echo ""
+echo "Next steps:"
+echo "  1. Run 'gh account-guard setup' to configure your profiles"
+echo "  2. Run 'gh account-guard install' to set up shell and git hooks"
+echo "  3. Use 'gh ag' as a shortcut for 'gh account-guard'"
+
