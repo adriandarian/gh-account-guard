@@ -211,12 +211,43 @@ cmd_status() {
   
   echo "Matched profile: $name (gh user: $gh_u)"
   echo ""
+  
+  # Check if gh auth matches
+  local current_gh_user
+  current_gh_user=$(gh auth status 2>&1 | grep -B 2 "Active account: true" | grep "Logged in to" | sed 's/.*account //' | sed 's/ .*//' 2>/dev/null || echo "")
+  
   echo "Current gh auth:"
   gh auth status || true
-  echo
+  echo ""
+  
+  if [[ -n "$current_gh_user" && "$current_gh_user" != "$gh_u" ]]; then
+    if has_gum; then
+      gum style --foreground 11 "⚠️  gh auth is set to '$current_gh_user' but profile expects '$gh_u'"
+      gum style "   Note: gh auth is global and affects all terminals/editors"
+      gum style "   Run 'gh account-guard switch' to change it (if desired)"
+    else
+      echo "⚠️  gh auth is set to '$current_gh_user' but profile expects '$gh_u'"
+      echo "   Note: gh auth is global and affects all terminals/editors"
+      echo "   Run 'gh account-guard switch' to change it (if desired)"
+    fi
+    echo ""
+  fi
+  
   echo "Current git identity:"
-  echo "  user.name  = $(git config --get user.name || echo '<unset>')"
-  echo "  user.email = $(git config --get user.email || echo '<unset>')"
+  local current_name
+  local current_email
+  current_name=$(git config --get user.name || echo '<unset>')
+  current_email=$(git config --get user.email || echo '<unset>')
+  
+  if [[ "$current_name" == "$git_name" ]] && [[ "$current_email" == "$git_email" ]]; then
+    echo "  ✓ user.name  = $current_name"
+    echo "  ✓ user.email = $current_email"
+  else
+    echo "  ⚠️  user.name  = $current_name (should be: $git_name)"
+    echo "  ⚠️  user.email = $current_email (should be: $git_email)"
+    echo ""
+    echo "Run 'gh account-guard fix' to update git identity"
+  fi
   echo "  gpgsign    = $(git config --get commit.gpgsign || echo '<unset>')"
 }
 
@@ -587,6 +618,12 @@ cmd_auto_enforce() {
   # Silently enforce profile settings without any output
   # Only show errors if something goes wrong
   
+  # Ensure CONFIG is set
+  [[ -n "${CONFIG:-}" ]] || CONFIG="$HOME/.config/gh/account-guard.yml"
+  
+  # Check if config exists
+  [[ -f "$CONFIG" ]] || return 0
+  
   # Check if we're in a git repo
   [[ -d .git ]] || return 0
   
@@ -610,14 +647,13 @@ cmd_auto_enforce() {
   gpgf=$(yaml_get ".profiles[$idx].git.gpgformat" "$CONFIG" 2>/dev/null || echo "")
   gpgs=$(yaml_get ".profiles[$idx].git.gpgsign" "$CONFIG" 2>/dev/null || echo "")
   
-  # Check and switch GitHub account if needed
-  if [[ -n "$gh_u" && "$gh_u" != "null" ]]; then
-    local current_gh_user
-    current_gh_user=$(gh auth status 2>&1 | grep -B 2 "Active account: true" | grep "Logged in to" | sed 's/.*account //' | sed 's/ .*//' 2>/dev/null || echo "")
-    if [[ -n "$current_gh_user" && "$current_gh_user" != "$gh_u" ]]; then
-      gh auth switch -u "$gh_u" >/dev/null 2>&1 || true
-    fi
-  fi
+  # NOTE: We do NOT automatically switch gh auth here because gh auth switch is GLOBAL
+  # and affects all terminals/editors. This causes problems when working with multiple
+  # projects simultaneously. Users should manually run 'gh account-guard switch' if
+  # they want to change the active gh auth account.
+  # 
+  # The pre-commit hook validates git identity (which is per-repo), not gh auth.
+  # Git commits use git config, not gh auth, so this is sufficient for compliance.
   
   # Check and apply git identity if needed
   local current_name
