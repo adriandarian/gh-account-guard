@@ -718,6 +718,30 @@ cmd_auto_enforce() {
     [[ -n "$gpgs" ]] && git config --local commit.gpgsign "$gpgs" 2>/dev/null || true
   fi
   
+  # Configure git remote URL to include username for authentication
+  # This helps git push use the correct account even when gh auth is different
+  # Note: gh auth is global, so we can't auto-switch it, but we can help git
+  # use the right credentials by including the username in the URL
+  if [[ -n "$gh_u" && "$gh_u" != "null" ]]; then
+    local remote_url
+    remote_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
+    if [[ -n "$remote_url" ]] && [[ "$remote_url" == https://github.com/* ]] && [[ "$remote_url" != *"@"* ]]; then
+      # Update remote URL to include username (helps git use correct credentials)
+      local new_url
+      new_url=$(echo "$remote_url" | sed "s|https://github.com/|https://$gh_u@github.com/|")
+      git remote set-url origin "$new_url" 2>/dev/null || true
+    elif [[ -n "$remote_url" ]] && [[ "$remote_url" == https://*@github.com/* ]]; then
+      # Update existing username in URL if it's different
+      local current_user
+      current_user=$(echo "$remote_url" | sed 's|https://\([^@]*\)@github.com/.*|\1|' 2>/dev/null || echo "")
+      if [[ -n "$current_user" && "$current_user" != "$gh_u" ]]; then
+        local new_url
+        new_url=$(echo "$remote_url" | sed "s|https://[^@]*@github.com/|https://$gh_u@github.com/|")
+        git remote set-url origin "$new_url" 2>/dev/null || true
+      fi
+    fi
+  fi
+  
   return 0
 }
 
