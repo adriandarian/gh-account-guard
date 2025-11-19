@@ -688,9 +688,16 @@ cmd_install_git_hook() {
   fi
   
   # Install a git pre-commit hook that validates git identity matches profile
-  [[ -d .git ]] || { echo "Not a git repository. Run this command from inside a git repo."; exit 1; }
+  # Check if we're in a git repo (handles both regular repos and worktrees)
+  git rev-parse --git-dir >/dev/null 2>&1 || { echo "Not a git repository. Run this command from inside a git repo."; exit 1; }
   
-  local hook_file=".git/hooks/pre-commit"
+  # Get the actual git directory (handles worktrees where .git is a file)
+  local git_dir
+  git_dir=$(git rev-parse --git-dir 2>/dev/null || echo ".git")
+  local hook_file="$git_dir/hooks/pre-commit"
+  
+  # Ensure hooks directory exists
+  mkdir -p "$(dirname "$hook_file")" 2>/dev/null || true
   
   # Create the hook that validates identity before commit
   # This hook calls back to gh account-guard to validate the identity
@@ -1209,7 +1216,7 @@ cmd_install() {
     
     # Only prompt if we're in a repo AND have interactive input available
     # Default to global since that's what users want
-    if [[ -d .git ]] && [ -t 0 ] 2>/dev/null && [ -t 1 ] 2>/dev/null; then
+    if git rev-parse --git-dir >/dev/null 2>&1 && [ -t 0 ] 2>/dev/null && [ -t 1 ] 2>/dev/null; then
       # Try to ask, but with very short timeout and default to global
       if has_gum 2>/dev/null; then
         echo ""
@@ -1270,7 +1277,7 @@ cmd_install() {
           echo "⚠️  Could not apply to existing repos (this is optional)"
         fi
       }
-    elif [[ -d .git ]]; then
+    elif git rev-parse --git-dir >/dev/null 2>&1; then
       echo ""
       if has_gum; then
         gum style --foreground 212 "Installing hook in current repo..."
