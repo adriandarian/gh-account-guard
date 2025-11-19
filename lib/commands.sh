@@ -262,6 +262,7 @@ cmd_fix() {
   skey=$(yaml_get ".profiles[$idx].git.signingkey" "$CONFIG")
   gpgf=$(yaml_get ".profiles[$idx].git.gpgformat" "$CONFIG")
   gpgs=$(yaml_get ".profiles[$idx].git.gpgsign" "$CONFIG")
+  gh_u=$(yaml_get ".profiles[$idx].gh_username" "$CONFIG" 2>/dev/null || echo "")
   rmatch=$(yaml_get ".profiles[$idx].remote_match" "$CONFIG" 2>/dev/null || echo "")
 
   if [[ -n "$rmatch" ]]; then
@@ -276,8 +277,50 @@ cmd_fix() {
   [[ -n "$skey" ]] && git config --local user.signingkey "$skey"
   [[ -n "$gpgf" ]] && git config --local gpg.format "$gpgf"
   [[ -n "$gpgs" ]] && git config --local commit.gpgsign "$gpgs"
+  
+  # Configure git remote URL to include username for authentication
+  # This helps git push use the correct account even when gh auth is different
+  # Note: gh auth is global, so we can't auto-switch it, but we can help git
+  # use the right credentials by including the username in the URL
+  local remote_url
+  remote_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
+  if [[ -n "$remote_url" ]] && [[ -n "$gh_u" && "$gh_u" != "null" ]]; then
+    if [[ "$remote_url" == https://github.com/* ]] && [[ "$remote_url" != *"@"* ]]; then
+      # Update remote URL to include username (helps git use correct credentials)
+      local new_url
+      new_url=$(echo "$remote_url" | sed "s|https://github.com/|https://$gh_u@github.com/|")
+      git remote set-url origin "$new_url" 2>/dev/null || true
+    elif [[ "$remote_url" == https://*@github.com/* ]]; then
+      # Update existing username in URL if it's different
+      local current_user
+      current_user=$(echo "$remote_url" | sed 's|https://\([^@]*\)@github.com/.*|\1|')
+      if [[ "$current_user" != "$gh_u" ]]; then
+        local new_url
+        new_url=$(echo "$remote_url" | sed "s|https://[^@]*@github.com/|https://$gh_u@github.com/|")
+        git remote set-url origin "$new_url" 2>/dev/null || true
+      fi
+    fi
+  fi
 
   echo "✅ Set repo identity to: $name <$email>; signing=$(git config --get commit.gpgsign)"
+  
+  # Warn about gh auth if it doesn't match
+  if [[ -n "$gh_u" && "$gh_u" != "null" ]]; then
+    local current_gh_user
+    current_gh_user=$(gh auth status 2>&1 | grep -B 2 "Active account: true" | grep "Logged in to" | sed 's/.*account //' | sed 's/ .*//' 2>/dev/null || echo "")
+    if [[ -n "$current_gh_user" && "$current_gh_user" != "$gh_u" ]]; then
+      echo ""
+      if has_gum; then
+        gum style --foreground 11 "⚠️  Note: gh auth is '$current_gh_user' but profile expects '$gh_u'"
+        gum style "   For git push to work, run: gh account-guard switch"
+        gum style "   (gh auth is global - affects all terminals/editors)"
+      else
+        echo "⚠️  Note: gh auth is '$current_gh_user' but profile expects '$gh_u'"
+        echo "   For git push to work, run: gh account-guard switch"
+        echo "   (gh auth is global - affects all terminals/editors)"
+      fi
+    fi
+  fi
 }
 
 cmd_switch() {
