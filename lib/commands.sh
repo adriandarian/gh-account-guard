@@ -252,7 +252,8 @@ cmd_status() {
 }
 
 cmd_fix() {
-  [[ -d .git ]] || { echo "Not a git repo."; exit 1; }
+  # Check if we're in a git repo (handles both regular repos and worktrees)
+  git rev-parse --git-dir >/dev/null 2>&1 || { echo "Not a git repo."; exit 1; }
   idx=$(match_profile "$PWD") || true
   [[ -n "$idx" ]] || { echo "No matching profile for $PWD"; exit 1; }
 
@@ -624,8 +625,8 @@ cmd_auto_enforce() {
   # Check if config exists
   [[ -f "$CONFIG" ]] || return 0
   
-  # Check if we're in a git repo
-  [[ -d .git ]] || return 0
+  # Check if we're in a git repo (handles both regular repos and worktrees)
+  git rev-parse --git-dir >/dev/null 2>&1 || return 0
   
   # Find matching profile
   local idx
