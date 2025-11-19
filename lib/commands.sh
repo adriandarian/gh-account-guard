@@ -1377,13 +1377,15 @@ cmd_install() {
     echo ""
     echo "What was installed:"
     [[ "$install_shell" == true ]] && echo "  ✓ Shell hook (auto-enforces on directory change)"
-    [[ "$install_git" == true && -d .git ]] && echo "  ✓ Git pre-commit hook (validates identity before commits)"
+    if [[ "$install_git" == true ]] && git rev-parse --git-dir >/dev/null 2>&1; then
+      echo "  ✓ Git pre-commit hook (validates identity before commits)"
+    fi
     echo ""
     echo "Next steps:"
     if [[ "$install_shell" == true ]]; then
       echo "  - Open a new terminal or run: source $shell_config"
     fi
-    if [[ "$install_git" == true && -d .git ]]; then
+    if [[ "$install_git" == true ]] && git rev-parse --git-dir >/dev/null 2>&1; then
       echo "  - Try committing to test the pre-commit hook"
     fi
   else
