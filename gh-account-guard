@@ -27,7 +27,7 @@ Commands:
   config               Manage extension settings (default directory, etc.)
   status               Show which profile matches CWD and current gh/git identity
   fix                  Apply matching profile to current repo (git config, signing)
-  switch               Run `gh auth switch` to the matching profile
+  switch               Run `gh auth switch` to the matching profile (use --interactive to select from all profiles)
   install               Install shell hook and git pre-commit hook (recommended)
   create-alias         Create 'gh ag' alias for 'gh account-guard'
   install-shell-hook   Prints a shell snippet for auto-enforcement on directory change
