@@ -36,15 +36,22 @@ git_configure_remote_url() {
   if [[ "$remote_url" == https://github.com/* ]] && [[ "$remote_url" != *"@"* ]]; then
     # Update remote URL to include username (helps git use correct credentials)
     local new_url
-    new_url=$(echo "$remote_url" | sed "s|https://github.com/|https://$gh_username@github.com/|")
+    new_url="${remote_url/https:\/\/github.com\//https://$gh_username@github.com/}"
     git_set_remote_url "$new_url"
   elif [[ "$remote_url" == https://*@github.com/* ]]; then
     # Update existing username in URL if it's different
-    local current_user
-    current_user=$(echo "$remote_url" | sed 's|https://\([^@]*\)@github.com/.*|\1|' 2>/dev/null || echo "")
+    local current_user=""
+    if [[ "$remote_url" =~ https://([^@]*)@github.com/ ]]; then
+      current_user="${BASH_REMATCH[1]}"
+    fi
     if [[ -n "$current_user" && "$current_user" != "$gh_username" ]]; then
       local new_url
-      new_url=$(echo "$remote_url" | sed "s|https://[^@]*@github.com/|https://$gh_username@github.com/|")
+      if [[ "$remote_url" =~ ^(https://)[^@]*(@github.com/.*)$ ]]; then
+        new_url="${BASH_REMATCH[1]}${gh_username}${BASH_REMATCH[2]}"
+      else
+        # Fallback to sed if regex fails
+        new_url=$(echo "$remote_url" | sed "s|https://[^@]*@github.com/|https://$gh_username@github.com/|")
+      fi
       git_set_remote_url "$new_url"
     fi
   fi
@@ -60,9 +67,15 @@ git_apply_identity() {
   
   git config --local user.name "$git_name" 2>/dev/null || true
   git config --local user.email "$git_email" 2>/dev/null || true
-  [[ -n "$signing_key" ]] && git config --local user.signingkey "$signing_key" 2>/dev/null || true
-  [[ -n "$gpg_format" ]] && git config --local gpg.format "$gpg_format" 2>/dev/null || true
-  [[ -n "$gpgsign" ]] && git config --local commit.gpgsign "$gpgsign" 2>/dev/null || true
+  if [[ -n "$signing_key" ]]; then
+    git config --local user.signingkey "$signing_key" 2>/dev/null || true
+  fi
+  if [[ -n "$gpg_format" ]]; then
+    git config --local gpg.format "$gpg_format" 2>/dev/null || true
+  fi
+  if [[ -n "$gpgsign" ]]; then
+    git config --local commit.gpgsign "$gpgsign" 2>/dev/null || true
+  fi
 }
 
 # Get current git identity

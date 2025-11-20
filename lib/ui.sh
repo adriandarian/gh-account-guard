@@ -155,7 +155,7 @@ interactive_menu_pure_bash() {
     local choice
     while true; do
       echo -n "Choose [1-$num_options]: " >&2
-      read choice
+      read -r choice
       # Default to option 1 if Enter pressed with no input
       if [[ -z "$choice" ]]; then
         choice=1
@@ -239,27 +239,24 @@ prompt() {
   
   if has_gum; then
     if [[ -n "$default_value" ]]; then
-      result=$(gum input --placeholder "$default_value" --prompt "$prompt_text: " --value "$default_value" 2>&1)
-      if [[ $? -ne 0 || -z "$result" ]]; then
+      if ! result=$(gum input --placeholder "$default_value" --prompt "$prompt_text: " --value "$default_value" 2>&1) || [[ -z "$result" ]]; then
         # gum failed, fall back to basic prompt
-        read -p "$prompt_text [$default_value]: " result
+        read -r -p "$prompt_text [$default_value]: " result
         echo "${result:-$default_value}"
       else
         echo "${result:-$default_value}"
       fi
     else
-      result=$(gum input --prompt "$prompt_text: " 2>&1)
-      if [[ $? -ne 0 ]]; then
+      if ! result=$(gum input --prompt "$prompt_text: " 2>&1) || [[ -z "$result" ]]; then
         # gum failed, fall back to basic prompt
         while [[ -z "$result" ]]; do
-          read -p "$prompt_text: " result
+          read -r -p "$prompt_text: " result
         done
         echo "$result"
       else
         while [[ -z "$result" ]]; do
-          result=$(gum input --prompt "$prompt_text: " 2>&1)
-          if [[ $? -ne 0 ]]; then
-            read -p "$prompt_text: " result
+          if ! result=$(gum input --prompt "$prompt_text: " 2>&1) || [[ -z "$result" ]]; then
+            read -r -p "$prompt_text: " result
           fi
         done
         echo "$result"
@@ -268,11 +265,11 @@ prompt() {
   else
     # Fallback to basic prompt
     if [[ -n "$default_value" ]]; then
-      read -p "$prompt_text [$default_value]: " result
+      read -r -p "$prompt_text [$default_value]: " result
       echo "${result:-$default_value}"
     else
       while [[ -z "$result" ]]; do
-        read -p "$prompt_text: " result
+        read -r -p "$prompt_text: " result
       done
       echo "$result"
     fi
@@ -285,19 +282,17 @@ prompt_optional() {
   
   if has_gum; then
     if [[ -n "$default_value" ]]; then
-      result=$(gum input --placeholder "Press Enter to skip" --prompt "$prompt_text: " --value "$default_value" 2>&1)
-      if [[ $? -ne 0 ]]; then
+      if ! result=$(gum input --placeholder "Press Enter to skip" --prompt "$prompt_text: " --value "$default_value" 2>&1); then
         # gum failed, fall back to basic prompt
-        read -p "$prompt_text [$default_value] (press Enter to skip): " result
+        read -r -p "$prompt_text [$default_value] (press Enter to skip): " result
         echo "${result:-$default_value}"
       else
         echo "${result:-$default_value}"
       fi
     else
-      result=$(gum input --placeholder "Press Enter to skip" --prompt "$prompt_text: " 2>&1)
-      if [[ $? -ne 0 ]]; then
+      if ! result=$(gum input --placeholder "Press Enter to skip" --prompt "$prompt_text: " 2>&1); then
         # gum failed, fall back to basic prompt
-        read -p "$prompt_text (press Enter to skip): " result
+        read -r -p "$prompt_text (press Enter to skip): " result
         echo "${result:-}"
       else
         echo "${result:-}"
@@ -306,10 +301,10 @@ prompt_optional() {
   else
     # Fallback to basic prompt
     if [[ -n "$default_value" ]]; then
-      read -p "$prompt_text [$default_value] (press Enter to skip): " result
+      read -r -p "$prompt_text [$default_value] (press Enter to skip): " result
       echo "${result:-$default_value}"
     else
-      read -p "$prompt_text (press Enter to skip): " result
+      read -r -p "$prompt_text (press Enter to skip): " result
       echo "${result:-}"
     fi
   fi
@@ -326,7 +321,7 @@ prompt_yesno() {
       if [[ $exit_code -ne 0 && $exit_code -ne 1 ]]; then
         # gum failed (not just user said no), fall back to basic prompt
         local result=""
-        read -p "$prompt_text [Y/n]: " result
+        read -r -p "$prompt_text [Y/n]: " result
         [[ "${result:-y}" =~ ^[Yy] ]]
       else
         return $exit_code
@@ -337,7 +332,7 @@ prompt_yesno() {
       if [[ $exit_code -ne 0 && $exit_code -ne 1 ]]; then
         # gum failed (not just user said no), fall back to basic prompt
         local result=""
-        read -p "$prompt_text [y/N]: " result
+        read -r -p "$prompt_text [y/N]: " result
         [[ "${result:-n}" =~ ^[Yy] ]]
       else
         return $exit_code
@@ -347,14 +342,14 @@ prompt_yesno() {
     # Fallback to basic prompt
     local result=""
     if [[ "$default" == "y" ]]; then
-      read -p "$prompt_text [Y/n]: " result
+      read -r -p "$prompt_text [Y/n]: " result
       if [[ "${result:-y}" =~ ^[Yy] ]]; then
         return 0
       else
         return 1
       fi
     else
-      read -p "$prompt_text [y/N]: " result
+      read -r -p "$prompt_text [y/N]: " result
       if [[ "${result:-n}" =~ ^[Yy] ]]; then
         return 0
       else

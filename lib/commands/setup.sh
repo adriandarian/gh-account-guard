@@ -5,7 +5,6 @@ cmd_setup() {
   mkdir -p "$(dirname "$CONFIG")"
   
   local overwrite=false
-  local add_mode=false
   
   if [[ -e "$CONFIG" ]]; then
     local choice
@@ -21,7 +20,7 @@ cmd_setup() {
     fi
     
     case "$choice" in
-      "Add a new profile"*) add_mode=true ;;
+      "Add a new profile"*) ;;
       "Start fresh"*) overwrite=true ;;
       "Cancel"*) echo "Cancelled."; exit 0 ;;
       *) echo "Invalid choice. Cancelled."; exit 1 ;;

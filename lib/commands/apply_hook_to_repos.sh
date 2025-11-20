@@ -37,7 +37,6 @@ cmd_apply_hook_to_existing_repos() {
   fi
   
   local applied_count=0
-  local scanned_count=0
   local profile_count
   profile_count=$(yaml_get '.profiles | length' "$CONFIG" 2>/dev/null || echo "0")
   
@@ -88,9 +87,6 @@ cmd_apply_hook_to_existing_repos() {
       # Find all .git directories in this path
       local path_count=0
       while IFS= read -r -d '' git_dir; do
-        local repo_dir
-        repo_dir=$(dirname "$git_dir")
-        
         # Copy hook from template
         if [[ -f "$template_dir/hooks/pre-commit" ]]; then
           cp "$template_dir/hooks/pre-commit" "$git_dir/hooks/pre-commit" 2>/dev/null || true

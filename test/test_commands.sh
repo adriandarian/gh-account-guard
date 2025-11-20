@@ -26,7 +26,7 @@ YAML
   
   # Create test git repo
   TEST_REPO=$(mktemp -d)
-  cd "$TEST_REPO"
+  cd "$TEST_REPO" || exit
   git init -q
   git config user.name "Test User"
   git config user.email "test@example.com"
@@ -55,7 +55,7 @@ teardown() {
   # Create directory matching test profile
   TEST_DIR="/tmp/test/repo"
   mkdir -p "$TEST_DIR"
-  cd "$TEST_DIR"
+  cd "$TEST_DIR" || exit
   git init -q
   
   run cmd_status
@@ -69,7 +69,7 @@ teardown() {
 @test "cmd_fix applies git config" {
   TEST_DIR="/tmp/test/repo"
   mkdir -p "$TEST_DIR"
-  cd "$TEST_DIR"
+  cd "$TEST_DIR" || exit
   git init -q
   
   run cmd_fix
@@ -84,7 +84,7 @@ teardown() {
 @test "cmd_auto_enforce sets correct git identity" {
   TEST_DIR="/tmp/test/repo"
   mkdir -p "$TEST_DIR"
-  cd "$TEST_DIR"
+  cd "$TEST_DIR" || exit
   git init -q
   
   # Set wrong identity

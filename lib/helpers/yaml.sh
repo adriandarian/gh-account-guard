@@ -163,7 +163,8 @@ _yaml_get_profile_field() {
     
     if [[ "$in_profile" == true ]]; then
       # Check if we've left this profile (less indentation)
-      local line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+      local line_indent
+      line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
       ((line_indent--))
       if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
         break
@@ -173,11 +174,13 @@ _yaml_get_profile_field() {
       # Path arrays start with "path:" followed by array items
       if [[ ! "$field" =~ ^path ]] && [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*$ ]]; then
         # Skip the entire path array
-        local path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+        local path_indent
+        path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
         ((i++))
         while [[ $i -lt ${#lines[@]} ]]; do
           local path_line="${lines[$i]}"
-          local path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
+          local path_line_indent
+          path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
           ((path_line_indent--))
           if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
             # Reached end of path array, process this line in next iteration
@@ -230,11 +233,13 @@ _yaml_get_profile_field() {
         local git_field="${BASH_REMATCH[1]}"
         if [[ "$line" =~ ^[[:space:]]*git:[[:space:]]*$ ]]; then
           # Entering git section, read next indented lines
-          local git_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+          local git_indent
+          git_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
           ((i++))
           while [[ $i -lt ${#lines[@]} ]]; do
             local git_line="${lines[$i]}"
-            local git_line_indent=$(echo "$git_line" | sed 's/[^ ].*//' | wc -c)
+            local git_line_indent
+            git_line_indent=$(echo "$git_line" | sed 's/[^ ].*//' | wc -c)
             ((git_line_indent--))
             if [[ $git_line_indent -le $git_indent ]] && [[ ! "$git_line" =~ ^[[:space:]]*$ ]]; then
               break
@@ -252,12 +257,14 @@ _yaml_get_profile_field() {
         local path_idx="${BASH_REMATCH[1]}"
         # Check if path is an array
         if [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*$ ]]; then
-          local path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+          local path_indent
+          path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
           local array_idx=0
           ((i++))
           while [[ $i -lt ${#lines[@]} ]]; do
             local path_line="${lines[$i]}"
-            local path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
+            local path_line_indent
+            path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
             ((path_line_indent--))
             if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
               # Reached end of path array, but don't advance i yet - let main loop handle next line
@@ -279,14 +286,16 @@ _yaml_get_profile_field() {
           continue
         fi
       elif [[ "$field" =~ ^path[[:space:]]*\|\s*length$ ]]; then
-        # Count path array length
-        if [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*$ ]]; then
-          local path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-          local count=0
-          ((i++))
-          while [[ $i -lt ${#lines[@]} ]]; do
-            local path_line="${lines[$i]}"
-            local path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
+      # Count path array length
+      if [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*$ ]]; then
+        local path_indent
+        path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+        local count=0
+        ((i++))
+        while [[ $i -lt ${#lines[@]} ]]; do
+          local path_line="${lines[$i]}"
+          local path_line_indent
+          path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
             ((path_line_indent--))
             if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
               break
@@ -415,12 +424,14 @@ _yaml_get_path_length() {
       
       # Check if path is an array
       if [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*$ ]]; then
-        local path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+        local path_indent
+        path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
         local count=0
         ((i++))
         while [[ $i -lt ${#lines[@]} ]]; do
           local path_line="${lines[$i]}"
-          local path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
+          local path_line_indent
+          path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
           ((path_line_indent--))
           if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
             break
@@ -451,9 +462,11 @@ _yaml_find_profile_by_name() {
   local name="$2"
   local field="$3"
   
-  local count=$(_yaml_count_profiles "$file")
+  local count
+  count=$(_yaml_count_profiles "$file")
   for ((i=0; i<count; i++)); do
-    local profile_name=$(_yaml_get_profile_field "$file" "$i" "name")
+    local profile_name
+    profile_name=$(_yaml_get_profile_field "$file" "$i" "name")
     if [[ "$profile_name" == "$name" ]]; then
       _yaml_get_profile_field "$file" "$i" "$field"
       return $?
@@ -521,7 +534,8 @@ yaml_update_profile_field() {
     
     if [[ "$in_profile" == true ]]; then
       # Check if we've left this profile
-      local line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+      local line_indent
+      line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
       ((line_indent--))
       if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
         # We've left the profile, but field wasn't updated - add it
@@ -572,12 +586,14 @@ yaml_update_profile_field() {
         local git_field="${BASH_REMATCH[1]}"
         if [[ "$line" =~ ^[[:space:]]*git:[[:space:]]*$ ]]; then
           echo "$line" >> "$temp_file"
-          local git_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+          local git_indent
+          git_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
           ((i++))
           local git_field_found=false
           while [[ $i -lt ${#lines[@]} ]]; do
             local git_line="${lines[$i]}"
-            local git_line_indent=$(echo "$git_line" | sed 's/[^ ].*//' | wc -c)
+            local git_line_indent
+            git_line_indent=$(echo "$git_line" | sed 's/[^ ].*//' | wc -c)
             ((git_line_indent--))
             if [[ $git_line_indent -le $git_indent ]] && [[ ! "$git_line" =~ ^[[:space:]]*$ ]]; then
               # End of git section, add field if not found
@@ -612,13 +628,15 @@ yaml_update_profile_field() {
         # Path is complex - handle both string and array cases
         if [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*$ ]]; then
           # It's an array - skip the entire array and replace
-          local path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+          local path_indent
+          path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
           echo "    path: \"$new_value\"" >> "$temp_file"
           ((i++))
           # Skip all array items
           while [[ $i -lt ${#lines[@]} ]]; do
             local path_line="${lines[$i]}"
-            local path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
+            local path_line_indent
+            path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
             ((path_line_indent--))
             if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
               ((i--))

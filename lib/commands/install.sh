@@ -127,7 +127,7 @@ cmd_install() {
         echo "  2) This repo only"
         echo -n "Choose [1-2] (default: 1, auto-selecting in 2s): "
         # Use a very short timeout and default to global
-        if read -t 2 hook_choice 2>/dev/null; then
+        if read -r -t 2 hook_choice 2>/dev/null; then
           if [[ "$hook_choice" == "2" ]]; then
             install_global=false
           fi

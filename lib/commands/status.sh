@@ -48,7 +48,8 @@ cmd_status() {
           done
           # Display as comma-separated list
           if [[ ${#profile_paths[@]} -gt 0 ]]; then
-            local paths_display=$(IFS=','; echo "${profile_paths[*]}")
+            local paths_display
+            paths_display=$(IFS=','; echo "${profile_paths[*]}")
             echo "  - $profile_name: $paths_display"
           else
             echo "  - $profile_name: (no paths)"
@@ -75,7 +76,6 @@ cmd_status() {
   gh_u=$(profile_get_field "$idx" "gh_username")
   git_name=$(profile_get_field "$idx" "git.name")
   git_email=$(profile_get_field "$idx" "git.email")
-  git_gpgsign=$(profile_get_field "$idx" "git.gpgsign")
   
   echo "Matched profile: $name (gh user: $gh_u)"
   echo ""

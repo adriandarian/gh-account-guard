@@ -250,7 +250,7 @@ cmd_edit() {
       exit 0
     fi
     # Remove "(current)" suffix if present
-    new_value=$(echo "$new_value" | sed 's/ (current)$//')
+    new_value="${new_value% (current)}"
   elif [[ "$field_key" == "path" ]]; then
     # For path editing, use regular prompt but allow directory browser option
     echo ""

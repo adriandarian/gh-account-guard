@@ -37,11 +37,13 @@ set_default_directory() {
   # If config doesn't exist, create it
   if [[ ! -f "$CONFIG" ]]; then
     mkdir -p "$(dirname "$CONFIG")"
-    echo "# Map local paths (prefix-glob) to profiles." > "$CONFIG"
-    echo "# Longest matching path wins." >> "$CONFIG"
-    echo "# Path can be a string (single path) or array (multiple paths)." >> "$CONFIG"
-    echo "default_directory: \"$default_dir\"" >> "$CONFIG"
-    echo "profiles: []" >> "$CONFIG"
+    {
+      echo "# Map local paths (prefix-glob) to profiles."
+      echo "# Longest matching path wins."
+      echo "# Path can be a string (single path) or array (multiple paths)."
+      echo "default_directory: \"$default_dir\""
+      echo "profiles: []"
+    } > "$CONFIG"
     return 0
   fi
   
@@ -101,10 +103,12 @@ add_profile_to_config() {
   # If config doesn't exist, create it with empty profiles array
   if [[ ! -f "$CONFIG" ]]; then
     mkdir -p "$(dirname "$CONFIG")"
-    echo "# Map local paths (prefix-glob) to profiles." > "$CONFIG"
-    echo "# Longest matching path wins." >> "$CONFIG"
-    echo "# Path can be a string (single path) or array (multiple paths)." >> "$CONFIG"
-    echo "profiles:" >> "$CONFIG"
+    {
+      echo "# Map local paths (prefix-glob) to profiles."
+      echo "# Longest matching path wins."
+      echo "# Path can be a string (single path) or array (multiple paths)."
+      echo "profiles:"
+    } > "$CONFIG"
   fi
 
   # Read existing config
@@ -150,12 +154,14 @@ add_profile_to_config() {
   fi
   
   # Git config
-  echo "    git:" >> "$temp_file"
-  echo "      name: \"$git_name\"" >> "$temp_file"
-  echo "      email: \"$git_email\"" >> "$temp_file"
-  echo "      signingkey: \"$signing_key\"" >> "$temp_file"
-  echo "      gpgsign: $gpgsign" >> "$temp_file"
-  echo "      gpgformat: \"$gpgformat\"" >> "$temp_file"
+  {
+    echo "    git:"
+    echo "      name: \"$git_name\""
+    echo "      email: \"$git_email\""
+    echo "      signingkey: \"$signing_key\""
+    echo "      gpgsign: $gpgsign"
+    echo "      gpgformat: \"$gpgformat\""
+  } >> "$temp_file"
   
   # Remote match (optional)
   if [[ -n "$remote_match" ]]; then
@@ -283,7 +289,7 @@ collect_profile_info() {
     fi
     
     # Extract username from selection (remove "(current)" if present)
-    gh_username=$(echo "$selected_account" | sed 's/ (current)$//')
+    gh_username="${selected_account% (current)}"
     
     # Fetch GitHub profile info for the selected account
     echo ""

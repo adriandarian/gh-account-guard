@@ -20,7 +20,7 @@ get_dirs_recursive() {
       while IFS= read -r subdir; do
         local full_path="$base_dir/$subdir"
         # Normalize path (remove double slashes)
-        full_path=$(echo "$full_path" | sed 's|//|/|g')
+        full_path="${full_path//\/\//\/}"
         if [[ -d "$full_path" ]]; then
           get_dirs_recursive "$full_path" "$max_depth" $((current_depth + 1))
         fi
@@ -66,7 +66,8 @@ prompt_paths_pure_bash() {
     
     # Add parent directory indicator if not at root
     if [[ "$base" != "/" ]] && [[ -n "$base" ]]; then
-      local parent=$(dirname "$base")
+      local parent
+      parent=$(dirname "$base")
       if [[ "$parent" != "$base" ]]; then
         dirs+=("..")
         echo "[DEBUG] Added parent directory: .." >> "$debug_log" 2>&1
@@ -97,7 +98,8 @@ prompt_paths_pure_bash() {
         # Fallback to find
         while IFS= read -r dir; do
           if [[ -d "$dir" ]] && [[ "$dir" != "$base" ]]; then
-            local dir_name=$(basename "$dir" 2>/dev/null || echo "")
+            local dir_name
+            dir_name=$(basename "$dir" 2>/dev/null || echo "")
             if [[ -n "$dir_name" ]]; then
               dirs+=("$dir_name")
               echo "[DEBUG] Added directory (find): $dir_name" >> "$debug_log" 2>&1
@@ -153,7 +155,8 @@ prompt_paths_pure_bash() {
     local new_display_lines=0
     
     # Header: Current path (full width)
-    local header_line=$(printf "%-${term_width}s" "$current_dir")
+    local header_line
+    header_line=$(printf "%-${term_width}s" "$current_dir")
     echo "${BOLD}${YELLOW}${header_line}${RESET}" >&2
     ((new_display_lines++))
     
@@ -164,8 +167,10 @@ prompt_paths_pure_bash() {
     ((new_display_lines++))
     
     # Separator line
-    local left_sep=$(printf '%*s' $left_width '' | tr ' ' '─')
-    local right_sep=$(printf '%*s' $right_width '' | tr ' ' '─')
+    local left_sep
+    left_sep=$(printf '%*s' $left_width '' | tr ' ' '─')
+    local right_sep
+    right_sep=$(printf '%*s' $right_width '' | tr ' ' '─')
     echo "${left_sep}${separator}${right_sep}" >&2
     ((new_display_lines++))
     
@@ -189,7 +194,7 @@ prompt_paths_pure_bash() {
         full_path=$(dirname "$current_dir")
       else
         full_path="$current_dir/$dir_name"
-        full_path=$(echo "$full_path" | sed 's|//|/|g')
+        full_path="${full_path//\/\//\/}"
       fi
       
       local marker=""
@@ -284,7 +289,7 @@ prompt_paths_pure_bash() {
   echo "Debug log: $debug_log" >&2
   
   local dirs
-  dirs=($(get_directories "$current_dir"))
+  mapfile -t dirs < <(get_directories "$current_dir")
   local num_dirs=${#dirs[@]}
   
   echo "Number of directories found: $num_dirs" >> "$debug_log" 2>&1
@@ -358,7 +363,9 @@ prompt_paths_pure_bash() {
     # In cbreak mode, Enter produces \n (0x0a) or \r (0x0d)
     if [[ "$key" == $'\n' ]] || [[ "$key" == $'\r' ]] || [[ "$key_hex" == "0a" ]] || [[ "$key_hex" == "0d" ]]; then
       # Enter pressed - finish with selections and return
-      echo "[DEBUG] Enter key detected! Key: $(printf '%q' "$key"), hex: $key_hex" >> "$debug_log" 2>&1
+      {
+        echo "[DEBUG] Enter key detected! Key: $(printf '%q' "$key"), hex: $key_hex"
+      } >> "$debug_log" 2>&1
       echo "[DEBUG] Selected paths count: ${#selected_paths[@]}" >> "$debug_log" 2>&1
       echo "[DEBUG] Selected paths: ${selected_paths[*]}" >> "$debug_log" 2>&1
       echo "[DEBUG] Current directory: $current_dir" >> "$debug_log" 2>&1
@@ -407,7 +414,7 @@ prompt_paths_pure_bash() {
                 fi
               else
                 local new_dir="$current_dir/$dir_name"
-                new_dir=$(echo "$new_dir" | sed 's|//|/|g')
+                new_dir="${new_dir//\/\//\/}"
                 if [[ -d "$new_dir" ]]; then
                   nav_stack+=("$current_dir")
                   current_dir="$new_dir"
@@ -415,20 +422,21 @@ prompt_paths_pure_bash() {
               fi
               selected_idx=0
               start_idx=0
-              dirs=($(get_directories "$current_dir"))
+              mapfile -t dirs < <(get_directories "$current_dir")
               num_dirs=${#dirs[@]}
               display_browser "$selected_idx" "$start_idx" "${dirs[@]}" >&2
             fi
             ;;
           'D') # Left arrow - go back to parent (refresh directory list)
             if [[ "$current_dir" != "/" ]] && [[ -n "$current_dir" ]]; then
-              local parent_dir=$(dirname "$current_dir")
+              local parent_dir
+              parent_dir=$(dirname "$current_dir")
               if [[ "$parent_dir" != "$current_dir" ]]; then
                 nav_stack+=("$current_dir")
                 current_dir="$parent_dir"
                 selected_idx=0
                 start_idx=0
-                dirs=($(get_directories "$current_dir"))
+                mapfile -t dirs < <(get_directories "$current_dir")
                 num_dirs=${#dirs[@]}
                 display_browser "$selected_idx" "$start_idx" "${dirs[@]}" >&2
               fi
@@ -457,7 +465,7 @@ prompt_paths_pure_bash() {
             full_path=$(dirname "$current_dir")
           else
             full_path="$current_dir/$dir_name"
-            full_path=$(echo "$full_path" | sed 's|//|/|g')
+            full_path="${full_path//\/\//\/}"
           fi
           
           # Toggle selection
