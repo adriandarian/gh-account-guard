@@ -35,6 +35,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       
@@ -68,6 +70,8 @@ jobs:
   build:
     name: Build Validation
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       
@@ -108,6 +112,8 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     needs: [lint, test, build]
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       
