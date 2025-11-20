@@ -6,11 +6,11 @@ SCRIPT_DIR="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
 # Source YAML parsing module
 # shellcheck source=lib/helpers/yaml.sh
-source "${SCRIPT_DIR}/helpers/yaml.sh"
+source "${SCRIPT_DIR}/lib/helpers/yaml.sh"
 
 # Source profile matching module
 # shellcheck source=lib/helpers/profile.sh
-source "${SCRIPT_DIR}/helpers/profile.sh"
+source "${SCRIPT_DIR}/lib/helpers/profile.sh"
 
 # Get default directory for file browser (from config or HOME)
 get_default_directory() {
