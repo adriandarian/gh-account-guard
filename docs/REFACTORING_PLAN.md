@@ -11,11 +11,11 @@
 
 ```
 lib/
-├── yaml.sh              # YAML parsing functions (extracted from config.sh)
-├── config.sh            # Config/profile management (simplified)
-├── git.sh               # Git helper functions (extracted from commands.sh)
-├── gh_auth.sh           # GitHub auth helper functions (extracted)
-├── profile.sh           # Profile matching/management (extracted from config.sh)
+├── helpers/
+│   ├── yaml.sh          # YAML parsing functions (extracted from config.sh)
+│   ├── git.sh           # Git helper functions (extracted from commands.sh)
+│   ├── gh_auth.sh       # GitHub auth helper functions (extracted)
+│   └── profile.sh       # Profile matching/management (extracted from config.sh)
 ├── commands/
 │   ├── setup.sh
 │   ├── init.sh
@@ -27,9 +27,11 @@ lib/
 │   ├── install.sh
 │   ├── install_shell_hook.sh
 │   ├── install_git_hook.sh
+│   ├── install_git_hook_global.sh
 │   ├── apply_hook_to_repos.sh
 │   └── create_alias.sh
 ├── commands.sh          # Loader that sources all command files
+├── config.sh            # Config/profile management (simplified)
 ├── directory.sh         # (unchanged)
 ├── ui.sh               # (unchanged)
 └── utils.sh            # (unchanged)
