@@ -21,16 +21,13 @@ jobs:
       - name: Run shellcheck
         run: |
           shellcheck gh-account-guard install
-          shellcheck lib/*.sh
-          shellcheck test/*.sh
+          find lib test -name "*.sh" -type f -exec shellcheck {} +
       
       - name: Check bash syntax
         run: |
           bash -n gh-account-guard
           bash -n install
-          for file in lib/*.sh test/*.sh; do
-            bash -n "$file" || true
-          done
+          find lib test -name "*.sh" -type f -exec bash -n {} \;
 
   test:
     name: Test
