@@ -1,0 +1,42 @@
+title: "[SHOWCASE] "
+labels: ["showcase", "community"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share how you're using gh-account-guard! Show off your setup, workflows, or creative uses of the tool.
+  - type: textarea
+    id: showcase
+    attributes:
+      label: What are you sharing?
+      description: Describe your setup, workflow, or use case
+      placeholder: |
+        - How are you using gh-account-guard?
+        - What workflows have you created?
+        - Any tips or tricks you've discovered?
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Share configuration snippets, scripts, or other details (redact sensitive info)
+      placeholder: |
+        ```yaml
+        # Share relevant config snippets here
+        ```
+        
+        ```bash
+        # Share scripts or commands here
+        ```
+    validations:
+      required: false
+  - type: textarea
+    id: tips
+    attributes:
+      label: Tips or Lessons Learned
+      description: Any tips, gotchas, or lessons you'd like to share with others?
+      placeholder: Share your wisdom...
+    validations:
+      required: false
+

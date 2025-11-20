@@ -1,0 +1,38 @@
+title: "[Q&A] "
+labels: ["question", "help"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask a question about gh-account-guard, get help with configuration, or discuss usage patterns.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know or discuss?
+      placeholder: Your question here...
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide any relevant context about your setup or what you're trying to achieve
+      placeholder: |
+        - What are you trying to accomplish?
+        - What have you tried so far?
+        - Any relevant configuration details?
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (optional)
+      description: Help us understand your setup
+      placeholder: |
+        - OS: [e.g., macOS 14.0, Ubuntu 22.04]
+        - Shell: [e.g., zsh, bash, fish]
+        - GitHub CLI version: [e.g., gh version 2.40.0]
+    validations:
+      required: false
+

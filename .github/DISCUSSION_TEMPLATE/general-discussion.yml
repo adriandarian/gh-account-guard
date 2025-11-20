@@ -1,0 +1,24 @@
+title: "[DISCUSSION] "
+labels: ["discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start a general discussion about gh-account-guard, best practices, community topics, or anything else related to the project.
+  - type: textarea
+    id: topic
+    attributes:
+      label: Discussion Topic
+      description: What would you like to discuss?
+      placeholder: Share your thoughts, questions, or topics for discussion...
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any additional context or background information
+      placeholder: Provide any relevant context or background...
+    validations:
+      required: false
+

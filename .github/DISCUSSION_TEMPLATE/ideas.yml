@@ -1,0 +1,32 @@
+title: "[IDEA] "
+labels: ["idea", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share ideas, suggestions, or improvements for gh-account-guard. This is a great place to brainstorm before creating a formal feature request.
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: Describe your idea or suggestion
+      placeholder: What would you like to see improved or added?
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: How would this idea help you or others?
+      placeholder: Describe a scenario where this would be useful...
+    validations:
+      required: false
+  - type: textarea
+    id: considerations
+    attributes:
+      label: Additional Considerations
+      description: Any other thoughts, alternatives, or related ideas?
+      placeholder: Share any additional context or related thoughts...
+    validations:
+      required: false
+
