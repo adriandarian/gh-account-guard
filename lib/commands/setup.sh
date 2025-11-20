@@ -4,6 +4,8 @@
 cmd_setup() {
   mkdir -p "$(dirname "$CONFIG")"
   
+  show_banner
+  
   local overwrite=false
   
   if [[ -e "$CONFIG" ]]; then

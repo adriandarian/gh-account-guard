@@ -232,6 +232,23 @@ $prompt_text"
   # Use pure bash menu (works everywhere, no dependencies)
   interactive_menu_pure_bash "$prompt_text" "$header_text" "${options[@]}"
 }
+
+show_banner() {
+  if [ -t 1 ]; then
+    echo "${CYAN}"
+    cat << "EOF"
+   ____  _   _    _    ____  
+  / ___|| | | |  / \  / ___| 
+ | |  _ | |_| | / _ \| |  _  
+ | |_| ||  _  |/ ___ \ |_| | 
+  \____||_| |_/_/   \_\____| 
+  ACCOUNT GUARD
+EOF
+    echo "${RESET}"
+    echo ""
+  fi
+}
+
 prompt() {
   local prompt_text="$1"
   local default_value="${2:-}"

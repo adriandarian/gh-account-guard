@@ -1,0 +1,19 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield Background: Dark GitHub Gray -->
+  <path d="M100 20 L170 50 V90 C170 140 100 180 100 180 C100 180 30 140 30 90 V50 Z" fill="#24292e" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- Inner Path Symbol: Represents splitting paths/identities -->
+  <g stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Main Trunk -->
+    <path d="M100 150 V110" />
+    <!-- Left Branch (Identity A) -->
+    <path d="M100 110 C100 80 70 80 70 60" />
+    <!-- Right Branch (Identity B) -->
+    <path d="M100 110 C100 80 130 80 130 60" />
+  </g>
+  
+  <!-- Identity Nodes -->
+  <circle cx="70" cy="60" r="10" fill="#ffffff" />
+  <circle cx="130" cy="60" r="10" fill="#ffffff" />
+</svg>
+

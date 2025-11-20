@@ -2,6 +2,7 @@
 # Init command: Create example config template
 
 cmd_init() {
+  show_banner
   mkdir -p "$(dirname "$CONFIG")"
   if [[ -e "$CONFIG" ]]; then
     echo "Config already exists at $CONFIG"
