@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/YOUR_USERNAME/gh-account-guard/blob/main/docs/README.md
+    about: Check the documentation for common questions and usage examples
+  - name: Discussions
+    url: https://github.com/YOUR_USERNAME/gh-account-guard/discussions
+    about: Ask questions and discuss ideas with the community
+
