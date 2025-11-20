@@ -1,0 +1,38 @@
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# Editor files
+*.swp
+*.swo
+*#
+.#*
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*.cache
+
+# Test artifacts
+test/tmp/
+test/output/
+
+# Dependencies (for semantic-release)
+node_modules/
+# Note: bun.lockb should be committed for reproducible builds with Bun
+
+# Local config files (if any)
+*.local.yml
+*.local.yaml
+

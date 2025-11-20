@@ -1,0 +1,28 @@
+{
+  "name": "gh-account-guard",
+  "version": "0.0.0-development",
+  "description": "A GitHub CLI extension that automatically switches your GitHub CLI account and enforces the correct Git identity based on repository path",
+  "private": true,
+  "packageManager": "bun@latest",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adriandarian/gh-account-guard.git"
+  },
+  "scripts": {
+    "semantic-release": "semantic-release"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^11.1.0",
+    "@semantic-release/git": "^10.1.0",
+    "@semantic-release/github": "^9.2.6",
+    "@semantic-release/release-notes-generator": "^12.1.0",
+    "semantic-release": "^23.0.2"
+  },
+  "release": {
+    "branches": [
+      "main"
+    ]
+  }
+}
+

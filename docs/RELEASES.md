@@ -4,7 +4,7 @@ This project uses [semantic-release](https://github.com/semantic-release/semanti
 
 ## How It Works
 
-When code is merged to the `main` branch, semantic-release automatically:
+Releases are triggered manually via GitHub Actions workflow dispatch. When you run the release workflow, semantic-release:
 
 1. **Analyzes commits** - Reads commit messages following [Conventional Commits](https://www.conventionalcommits.org/) format
 2. **Determines version bump** - Calculates the next version based on commit types:
@@ -37,11 +37,12 @@ The release configuration (`.releaserc.json`) defines:
 
 ## Manual Release Process
 
-Normally, releases happen automatically. However, if you need to trigger a release manually:
+Releases are triggered manually when you're ready to publish a stable version:
 
 1. **Ensure all commits follow Conventional Commits format**
-2. **Push to main branch** - semantic-release runs automatically via CI/CD
-3. **Check GitHub Actions** - The release workflow will run
+2. **Go to GitHub Actions** → Select "Release" workflow
+3. **Click "Run workflow"** → Select the branch (usually `main`) → Click "Run workflow"
+4. **Monitor the workflow** - semantic-release will analyze commits and create a release if needed
 
 ## Release Notes
 
@@ -62,12 +63,27 @@ This project follows [Semantic Versioning](https://semver.org/) (SemVer):
 
 ## CI/CD Integration
 
-Releases are triggered by the GitHub Actions workflow (`.github/workflows/ci.yml`):
+Releases are triggered manually via the GitHub Actions workflow (`.github/workflows/release.yml`):
 
-- Runs on pushes to `main` branch
-- Executes semantic-release
+- Manual workflow dispatch only (no automatic releases)
+- Executes semantic-release when triggered
 - Publishes to GitHub Releases
 - Updates changelog automatically
+
+## Testing Locally
+
+To test what would be released without actually creating a release:
+
+```bash
+bun install
+bunx semantic-release --dry-run
+```
+
+This will show you:
+- What version would be released
+- What commits would be included
+- What the changelog would look like
+- But won't actually create a release or tag
 
 ## Troubleshooting
 
