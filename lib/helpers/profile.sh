@@ -7,6 +7,9 @@ match_profile() {
   local best=""
   local best_len=0
 
+  # Normalize directory path (remove trailing slash for consistent matching)
+  dir="${dir%/}"
+
   # Iterate profiles and choose the longest matching glob
   local n
   n=$(yaml_get '.profiles | length' "$CONFIG" 2>/dev/null || echo 0)
@@ -23,9 +26,11 @@ match_profile() {
         local pattern
         pattern=$(yaml_get ".profiles[$i].path[$j]" "$CONFIG")
         if [[ -n "$pattern" ]]; then
-          # Expand ~
+          # Expand ~ and normalize (remove trailing slash)
           pattern=${pattern/#\~/$HOME}
-          if [[ "$dir" == $pattern* ]]; then
+          pattern="${pattern%/}"
+          # Check if directory matches pattern (exact match or starts with pattern/)
+          if [[ "$dir" == "$pattern" ]] || [[ "$dir" == "$pattern"/* ]]; then
             local len=${#pattern}
             if (( len > best_len )); then
               best_len=$len
@@ -39,9 +44,11 @@ match_profile() {
       local pattern
       pattern=$(yaml_get ".profiles[$i].path" "$CONFIG")
       if [[ -n "$pattern" ]]; then
-        # Expand ~
+        # Expand ~ and normalize (remove trailing slash)
         pattern=${pattern/#\~/$HOME}
-        if [[ "$dir" == $pattern* ]]; then
+        pattern="${pattern%/}"
+        # Check if directory matches pattern (exact match or starts with pattern/)
+        if [[ "$dir" == "$pattern" ]] || [[ "$dir" == "$pattern"/* ]]; then
           local len=${#pattern}
           if (( len > best_len )); then
             best_len=$len
