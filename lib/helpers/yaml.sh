@@ -356,7 +356,8 @@ _yaml_get_path_type() {
     fi
     
     if [[ "$in_profile" == true ]]; then
-      local line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+      local line_indent
+      line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
       ((line_indent--))
       if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
         break
@@ -416,7 +417,8 @@ _yaml_get_path_length() {
     fi
     
     if [[ "$in_profile" == true ]]; then
-      local line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+      local line_indent
+      line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
       ((line_indent--))
       if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
         break

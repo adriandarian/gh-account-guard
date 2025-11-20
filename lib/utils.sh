@@ -2,7 +2,7 @@
 # Utility functions for gh-account-guard
 
 # Configuration file path
-CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/gh/account-guard.yml"
+export CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/gh/account-guard.yml"
 
 # Check if a command exists
 need_cmd() { 
@@ -47,17 +47,17 @@ is_tty() {
 
 # ANSI escape codes for cross-platform terminal control
 ESC=$(printf '\033')
-CLEAR_LINE="${ESC}[2K"
-CURSOR_UP="${ESC}[1A"
-CURSOR_DOWN="${ESC}[1B"
-CURSOR_HOME="${ESC}[H"
-HIDE_CURSOR="${ESC}[?25l"
-SHOW_CURSOR="${ESC}[?25h"
-REVERSE="${ESC}[7m"
-RESET="${ESC}[0m"
-BOLD="${ESC}[1m"
-CYAN="${ESC}[36m"
-GREEN="${ESC}[32m"
-YELLOW="${ESC}[33m"
-BLUE="${ESC}[34m"
+export CLEAR_LINE="${ESC}[2K"
+export CURSOR_UP="${ESC}[1A"
+export CURSOR_DOWN="${ESC}[1B"
+export CURSOR_HOME="${ESC}[H"
+export HIDE_CURSOR="${ESC}[?25l"
+export SHOW_CURSOR="${ESC}[?25h"
+export REVERSE="${ESC}[7m"
+export RESET="${ESC}[0m"
+export BOLD="${ESC}[1m"
+export CYAN="${ESC}[36m"
+export GREEN="${ESC}[32m"
+export YELLOW="${ESC}[33m"
+export BLUE="${ESC}[34m"
 

@@ -49,8 +49,10 @@ git_configure_remote_url() {
       if [[ "$remote_url" =~ ^(https://)[^@]*(@github.com/.*)$ ]]; then
         new_url="${BASH_REMATCH[1]}${gh_username}${BASH_REMATCH[2]}"
       else
-        # Fallback to sed if regex fails
-        new_url=$(echo "$remote_url" | sed "s|https://[^@]*@github.com/|https://$gh_username@github.com/|")
+        # Fallback: use parameter expansion to replace username in URL
+        # Pattern: https://[anything]@github.com/ -> https://$gh_username@github.com/
+        local suffix="${remote_url#*@github.com/}"
+        new_url="https://${gh_username}@github.com/${suffix}"
       fi
       git_set_remote_url "$new_url"
     fi

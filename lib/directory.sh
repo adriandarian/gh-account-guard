@@ -365,10 +365,10 @@ prompt_paths_pure_bash() {
       # Enter pressed - finish with selections and return
       {
         echo "[DEBUG] Enter key detected! Key: $(printf '%q' "$key"), hex: $key_hex"
+        echo "[DEBUG] Selected paths count: ${#selected_paths[@]}"
+        echo "[DEBUG] Selected paths: ${selected_paths[*]}"
+        echo "[DEBUG] Current directory: $current_dir"
       } >> "$debug_log" 2>&1
-      echo "[DEBUG] Selected paths count: ${#selected_paths[@]}" >> "$debug_log" 2>&1
-      echo "[DEBUG] Selected paths: ${selected_paths[*]}" >> "$debug_log" 2>&1
-      echo "[DEBUG] Current directory: $current_dir" >> "$debug_log" 2>&1
       
       # Show a message to user before exiting
       echo "" >&2

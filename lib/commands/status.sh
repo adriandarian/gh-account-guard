@@ -70,7 +70,6 @@ cmd_status() {
   local gh_u
   local git_name
   local git_email
-  local git_gpgsign
   
   name=$(profile_get_field "$idx" "name")
   gh_u=$(profile_get_field "$idx" "gh_username")
