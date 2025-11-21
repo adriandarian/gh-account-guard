@@ -22,8 +22,17 @@ echo ""
 
 cd "$PROJECT_ROOT"
 
-# Run tests with verbose output
-bats --verbose test/*.sh
+# Run tests (try with verbose flag, fallback to basic if not supported)
+set +e
+bats --help 2>&1 | grep -q "show-output-of-passing-tests"
+VERBOSE_SUPPORTED=$?
+set -e
+
+if [ $VERBOSE_SUPPORTED -eq 0 ]; then
+  bats --show-output-of-passing-tests test/test_*.sh
+else
+  bats test/test_*.sh
+fi
 
 echo ""
 echo "✅ All tests passed!"
