@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Utility functions for gh-account-guard
 
-# Configuration file path
-export CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/gh/account-guard.yml"
+# Configuration file path (respects CONFIG env var if already set)
+export CONFIG="${CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/gh/account-guard.yml}"
 
 # Check if a command exists
 need_cmd() { 
