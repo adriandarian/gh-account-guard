@@ -133,6 +133,7 @@ jobs:
       - name: Test init command
         run: |
           TEST_CONFIG=$(mktemp)
+          rm -f "$TEST_CONFIG"  # Remove file so init can create it
           CONFIG="$TEST_CONFIG" gh account-guard init
           [ -f "$TEST_CONFIG" ]
           grep -q "profiles:" "$TEST_CONFIG"
