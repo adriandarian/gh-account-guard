@@ -5,8 +5,13 @@ load '../lib/utils.sh'
 
 @test "has_gum returns 0 when gum is available" {
   if command -v gum >/dev/null 2>&1; then
-    run has_gum
-    [ "$status" -eq 0 ]
+    # has_gum also checks for TTY, so skip if not in TTY
+    if [ -t 0 ] && [ -t 1 ]; then
+      run has_gum
+      [ "$status" -eq 0 ]
+    else
+      skip "gum installed but not in TTY"
+    fi
   else
     skip "gum not installed"
   fi

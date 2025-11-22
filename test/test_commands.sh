@@ -15,9 +15,13 @@ profiles:
       gpgsign: false
 YAML
   
-  # Source modules
+  # Source modules (in dependency order)
   SCRIPT_DIR="$(cd "$(dirname "${BATS_TEST_FILENAME}")/.." && pwd)"
   source "${SCRIPT_DIR}/lib/utils.sh"
+  source "${SCRIPT_DIR}/lib/helpers/yaml.sh"
+  source "${SCRIPT_DIR}/lib/helpers/git.sh"
+  source "${SCRIPT_DIR}/lib/helpers/gh_auth.sh"
+  source "${SCRIPT_DIR}/lib/helpers/profile.sh"
   source "${SCRIPT_DIR}/lib/config.sh"
   source "${SCRIPT_DIR}/lib/commands.sh"
   
