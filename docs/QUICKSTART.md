@@ -239,5 +239,5 @@ profiles:
 
 - Open an [issue](https://github.com/<your-username>/gh-account-guard/issues) for bugs
 - Check existing [discussions](https://github.com/<your-username>/gh-account-guard/discussions)
-- Review the [changelog](CHANGELOG.md) for recent changes
+- Review the [changelog](../CHANGELOG.md) for recent changes
 

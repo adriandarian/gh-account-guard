@@ -11,7 +11,7 @@ Releases are triggered manually via GitHub Actions workflow dispatch. When you r
    - `feat:` → Minor version bump (e.g., 1.0.0 → 1.1.0)
    - `fix:` → Patch version bump (e.g., 1.0.0 → 1.0.1)
    - `feat!:` or `BREAKING CHANGE:` → Major version bump (e.g., 1.0.0 → 2.0.0)
-3. **Generates changelog** - Automatically updates `docs/CHANGELOG.md` with release notes
+3. **Generates changelog** - Automatically updates `CHANGELOG.md` with release notes
 4. **Creates Git tag** - Tags the release with the version number
 5. **Creates GitHub release** - Publishes release notes on GitHub
 
@@ -32,7 +32,7 @@ The release configuration (`.releaserc.json`) defines:
 
 - **Branches**: Only `main` branch triggers releases
 - **Preset**: Uses `conventionalcommits` preset
-- **Changelog**: Automatically generated and committed to `docs/CHANGELOG.md`
+- **Changelog**: Automatically generated and committed to `CHANGELOG.md`
 - **GitHub**: Creates releases with release notes
 
 ## Manual Release Process
@@ -102,12 +102,12 @@ This will show you:
 
 ### Changelog not updating
 
-- Check that `docs/CHANGELOG.md` exists
+- Check that `CHANGELOG.md` exists
 - Verify semantic-release has write permissions
 - Check CI logs for errors
 
 ## Related Documentation
 
 - [Contributing Guide](../CONTRIBUTING.md) - How to write commit messages
-- [Changelog](CHANGELOG.md) - Version history
+- [Changelog](../CHANGELOG.md) - Version history
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message format

@@ -231,6 +231,6 @@ MIT
 - [Quick Start](docs/QUICKSTART.md) - Getting started guide
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Architecture](docs/ARCHITECTURE.md) - How it works (for developers)
-- [Changelog](docs/CHANGELOG.md) - Version history and changes
+- [Changelog](CHANGELOG.md) - Version history and changes
 - [Release Process](docs/RELEASES.md) - How releases work
 
