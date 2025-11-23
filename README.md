@@ -1,6 +1,7 @@
 # gh-account-guard
 
 [![CI](https://github.com/adriandarian/gh-account-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/adriandarian/gh-account-guard/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/adriandarian/gh-account-guard/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/adriandarian/gh-account-guard/actions/workflows/github-code-scanning/codeql)
 [![Version](https://img.shields.io/github/v/release/adriandarian/gh-account-guard)](https://github.com/adriandarian/gh-account-guard/releases/latest)
 
 A GitHub CLI extension that automatically switches your GitHub CLI account and enforces the correct Git identity (name, email, signing) based on the repository path.
