@@ -82,7 +82,7 @@ When using this extension:
 
 3. **Use signing keys securely**: Store your SSH/GPG signing keys securely and never commit them to version control.
 
-4. **Keep dependencies updated**: Keep `yq` and other dependencies up-to-date to benefit from security patches.
+4. **Keep tools updated**: Keep `git` and `gh` (GitHub CLI) up-to-date to benefit from security patches.
 
 5. **Audit shell hooks**: If you install shell hooks, review them before adding to your shell configuration.
 

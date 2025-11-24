@@ -38,10 +38,10 @@ gh extension install .
 
 ## Prerequisites
 
-- **[yq](https://github.com/mikefarah/yq)** - YAML processor (required)
-  - macOS: `brew install yq`
-  - Windows: `choco install yq`
-  - Linux: See [yq installation guide](https://github.com/mikefarah/yq#install)
+**Zero external dependencies!** This extension uses pure bash for all operations. Only requires:
+
+- **GitHub CLI** (`gh`) - Already required for GitHub CLI extensions
+- **Git** - Standard on most development machines
 
 ### Optional UI Enhancements
 
@@ -63,6 +63,8 @@ For a more beautiful and interactive experience, install these optional tools:
   - Makes config files easier to read
 
 **Note:** All UI enhancements are optional. The extension works perfectly fine without them, but they make the experience much nicer!
+
+**Zero Dependencies:** This extension uses pure bash YAML parsing and requires no external tools beyond `git` and `gh` (which are needed for the tool's core functionality).
 
 ## Quick Start
 

@@ -25,30 +25,6 @@ Common issues and solutions for `gh-account-guard`.
    gh --version  # Should be 2.0.0 or later
    ```
 
-### yq Not Found
-
-**Problem:** Error about missing `yq` command.
-
-**Solutions:**
-1. Install yq:
-   ```bash
-   # macOS
-   brew install yq
-   
-   # Linux
-   sudo apt-get install yq
-   ```
-
-2. Verify installation:
-   ```bash
-   yq --version
-   ```
-
-3. Check PATH:
-   ```bash
-   which yq
-   ```
-
 ## Configuration Issues
 
 ### Profile Not Matching
@@ -103,12 +79,7 @@ Common issues and solutions for `gh-account-guard`.
 **Problem:** Error parsing config file.
 
 **Solutions:**
-1. Validate YAML syntax:
-   ```bash
-   yq eval . ~/.config/gh/account-guard.yml
-   ```
-
-2. Check for common issues:
+1. Check for common YAML issues:
    - Missing colons after keys
    - Incorrect indentation (use spaces, not tabs)
    - Unquoted strings with special characters
@@ -192,7 +163,7 @@ Common issues and solutions for `gh-account-guard`.
 
 2. Check `gh_username` in config:
    ```bash
-   yq '.profiles[].gh_username' ~/.config/gh/account-guard.yml
+   cat ~/.config/gh/account-guard.yml | grep gh_username
    ```
 
 3. Ensure username matches logged-in account:
@@ -265,7 +236,6 @@ Common issues and solutions for `gh-account-guard`.
 3. If slow, check:
    - Network connectivity (for `gh auth switch`)
    - Number of profiles (more profiles = slower matching)
-   - yq performance
 
 4. Consider running manually instead:
    ```bash
@@ -301,11 +271,7 @@ Common issues and solutions for `gh-account-guard`.
 
 **Solutions:**
 1. Reduce number of profiles (if possible)
-2. Check yq performance:
-   ```bash
-   time yq '.profiles' ~/.config/gh/account-guard.yml
-   ```
-
+2. Profile matching uses pure bash YAML parsing (no external dependencies)
 3. Consider caching (future feature)
 
 ## Platform-Specific Issues
@@ -379,11 +345,6 @@ If you're still experiencing issues:
 - Check that a profile path matches your current directory
 - Verify path format in config file
 - Remember: longest match wins
-
-### "yq: command not found"
-
-- Install yq: `brew install yq` (macOS) or `sudo apt-get install yq` (Linux)
-- Verify installation: `which yq`
 
 ### "Not a git repo"
 

@@ -11,15 +11,9 @@ Before you begin, ensure you have:
    gh --version
    ```
 
-2. **yq** installed (required dependency)
+2. **Git** installed (standard on most development machines)
    ```bash
-   # macOS
-   brew install yq
-   
-   # Linux (Ubuntu/Debian)
-   sudo apt-get install yq
-   
-   # Or download from: https://github.com/mikefarah/yq#install
+   git --version
    ```
 
 3. **Multiple GitHub accounts** logged in (if applicable)

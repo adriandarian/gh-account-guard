@@ -51,10 +51,11 @@ Each command is implemented as a separate file:
 
 Reusable functionality extracted into focused modules:
 
-- **`yaml.sh`**: YAML parsing using `yq`
+- **`yaml.sh`**: Pure bash YAML parsing (zero dependencies)
   - Reading values from config
   - Writing/updating config
   - YAML structure manipulation
+  - No external tools required
 
 - **`git.sh`**: Git operations
   - Setting git config
@@ -227,21 +228,22 @@ make test
 
 ### Required
 
-- **bash** - Shell interpreter
-- **yq** - YAML processor
-- **git** - Git operations
-- **gh** - GitHub CLI
+- **bash** - Shell interpreter (standard on Unix systems)
+- **git** - Git operations (required for the tool's core functionality)
+- **gh** - GitHub CLI (required for GitHub CLI extensions)
+
+**Zero external dependencies!** All YAML parsing is done in pure bash.
 
 ### Optional
 
-- **gum** - Enhanced UI prompts
-- **fzf** - Interactive selection
-- **bat** - Syntax highlighting
+- **gum** - Enhanced UI prompts (has fallback to basic prompts)
+- **fzf** - Interactive selection (has fallback to basic menu)
+- **bat** - Syntax highlighting (has fallback to `cat`)
 
 ## Performance Considerations
 
 - Profile matching is O(n) where n = number of profiles
-- YAML parsing uses `yq` (external process)
+- YAML parsing uses pure bash (no external processes)
 - Git operations are minimal (config reads/writes)
 - Shell hooks run asynchronously to avoid blocking
 

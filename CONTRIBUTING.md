@@ -62,7 +62,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
 git commit -m "feat: add support for custom config paths"
 
 # Bug fix (patch release)
-git commit -m "fix: handle missing yq dependency gracefully"
+git commit -m "fix: handle missing config file gracefully"
 
 # Breaking change (major release)
 git commit -m "feat!: change default config location
