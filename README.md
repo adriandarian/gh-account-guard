@@ -1,5 +1,10 @@
 # gh-account-guard
 
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/feed/update/urn:li:ugcPost:7408420954785210368/)
+[![Dev.to](https://img.shields.io/badge/Dev.to-0A0A0A?style=flat&logo=devdotto&logoColor=white)](https://dev.to/adriandarian/how-i-stopped-mixing-personal-and-work-github-accounts-4c2j)
+[![Medium](https://img.shields.io/badge/Medium-000000?style=flat&logo=medium&logoColor=white)](https://medium.com/@adrian.the.hactus/how-i-stopped-mixing-personal-and-work-github-accounts-079c82e2acca)
+[![X](https://img.shields.io/badge/X-000000?style=flat&logo=x&logoColor=white)](https://x.com/AdrianTheHactus/status/2002655602682835106)
+
 [![CI](https://github.com/adriandarian/gh-account-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/adriandarian/gh-account-guard/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/adriandarian/gh-account-guard/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/adriandarian/gh-account-guard/actions/workflows/github-code-scanning/codeql)
 [![Version](https://img.shields.io/github/v/release/adriandarian/gh-account-guard)](https://github.com/adriandarian/gh-account-guard/releases/latest)
