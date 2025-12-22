@@ -3,24 +3,29 @@
 
 cmd_status() {
   [[ -f "$CONFIG" ]] || {
-    if has_gum; then
-      gum style --foreground 196 "⚠️  No configuration file found at $CONFIG"
-      echo ""
-      echo "Run 'gh account-guard setup' to create one."
-    else
-      echo "⚠️  No configuration file found at $CONFIG"
-      echo ""
-      echo "Run 'gh account-guard setup' to create one."
-    fi
+    echo "${YELLOW}⚠️  No configuration file found at $CONFIG${RESET}"
+    echo ""
+    echo "Run 'gh account-guard setup' to create one."
     return 1
   }
+  
+  # Header
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "${BOLD}🔍 gh-account-guard Status${RESET}"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  
+  # Current directory
+  echo "${CYAN}📁 Current directory:${RESET} $PWD"
+  echo ""
   
   local idx
   idx=$(match_profile "$PWD") || true
   if [[ -z "$idx" ]]; then
-    echo "No matching profile found for current directory: $PWD"
+    echo "${YELLOW}⚠️  No matching profile found${RESET}"
     echo ""
-    echo "Configured profiles:"
+    echo "${BOLD}📋 Configured Profiles${RESET}"
+    echo ""
     local profile_count
     profile_count=$(yaml_get '.profiles | length' "$CONFIG" 2>/dev/null || echo "0")
     if [[ "$profile_count" -eq 0 ]]; then
@@ -39,33 +44,33 @@ cmd_status() {
           # Multiple paths
           local path_count
           path_count=$(yaml_get ".profiles[$i].path | length" "$CONFIG" 2>/dev/null || echo "0")
+          echo "  ${CYAN}┌─ Profile: ${BOLD}$profile_name${RESET}"
+          echo "  ${CYAN}│${RESET}  Paths:"
           for ((j=0; j<path_count; j++)); do
             local path_val
             path_val=$(yaml_get ".profiles[$i].path[$j]" "$CONFIG" 2>/dev/null || echo "")
             if [[ -n "$path_val" ]]; then
-              profile_paths+=("$path_val")
+              echo "  ${CYAN}│${RESET}    • $path_val"
             fi
           done
-          # Display as comma-separated list
-          if [[ ${#profile_paths[@]} -gt 0 ]]; then
-            local paths_display
-            paths_display=$(IFS=','; echo "${profile_paths[*]}")
-            echo "  - $profile_name: $paths_display"
-          else
-            echo "  - $profile_name: (no paths)"
-          fi
+          echo "  ${CYAN}└─${RESET}"
         else
           # Single path
           local profile_path
           profile_path=$(yaml_get ".profiles[$i].path" "$CONFIG" 2>/dev/null || echo "")
-          echo "  - $profile_name: $profile_path"
+          echo "  ${CYAN}┌─ Profile: ${BOLD}$profile_name${RESET}"
+          echo "  ${CYAN}│${RESET}  Path: $profile_path"
+          echo "  ${CYAN}└─${RESET}"
         fi
+        echo ""
       done
     fi
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     echo "Run 'gh account-guard setup' to add or modify profiles."
     exit 1
   fi
+  
   local name
   local gh_u
   local git_name
@@ -76,45 +81,75 @@ cmd_status() {
   git_name=$(profile_get_field "$idx" "git.name")
   git_email=$(profile_get_field "$idx" "git.email")
   
-  echo "Matched profile: $name (gh user: $gh_u)"
+  # Matched profile section
+  echo "${BOLD}📋 Matched Profile${RESET}"
+  echo ""
+  echo "  ${CYAN}┌─ Profile: ${BOLD}$name${RESET}"
+  echo "  ${CYAN}│${RESET}  GitHub: $gh_u"
+  echo "  ${CYAN}│${RESET}  Expected Git Name: $git_name"
+  echo "  ${CYAN}│${RESET}  Expected Git Email: $git_email"
+  echo "  ${CYAN}└─${RESET}"
   echo ""
   
-  # Check if gh auth matches
+  # GitHub Auth section
+  echo "${BOLD}🔐 GitHub Authentication${RESET}"
+  echo ""
   local current_gh_user
   current_gh_user=$(gh_auth_get_current_user)
   
-  echo "Current gh auth:"
-  gh auth status || true
+  if [[ -n "$current_gh_user" ]]; then
+    if [[ "$current_gh_user" == "$gh_u" ]]; then
+      echo "  ${GREEN}✓${RESET} Logged in as: ${BOLD}$current_gh_user${RESET}"
+    else
+      echo "  ${YELLOW}⚠️${RESET} Logged in as: ${BOLD}$current_gh_user${RESET}"
+      echo "     ${YELLOW}Expected: $gh_u${RESET}"
+      echo ""
+      echo "     Note: gh auth is global and affects all terminals/editors"
+      echo "     Run 'gh account-guard switch' to change it (if desired)"
+    fi
+  else
+    echo "  ${YELLOW}⚠️${RESET} Not logged in to GitHub CLI"
+  fi
   echo ""
   
-  if [[ -n "$current_gh_user" && "$current_gh_user" != "$gh_u" ]]; then
-    if has_gum; then
-      gum style --foreground 11 "⚠️  gh auth is set to '$current_gh_user' but profile expects '$gh_u'"
-      gum style "   Note: gh auth is global and affects all terminals/editors"
-      gum style "   Run 'gh account-guard switch' to change it (if desired)"
-    else
-      echo "⚠️  gh auth is set to '$current_gh_user' but profile expects '$gh_u'"
-      echo "   Note: gh auth is global and affects all terminals/editors"
-      echo "   Run 'gh account-guard switch' to change it (if desired)"
-    fi
-    echo ""
-  fi
-  
-  echo "Current git identity:"
+  # Git Identity section
+  echo "${BOLD}👤 Git Identity${RESET}"
+  echo ""
   local current_name
   local current_email
-  current_name=$(git config --get user.name || echo '<unset>')
-  current_email=$(git config --get user.email || echo '<unset>')
+  local current_gpgsign
+  current_name=$(git config --get user.name 2>/dev/null || echo '<unset>')
+  current_email=$(git config --get user.email 2>/dev/null || echo '<unset>')
+  current_gpgsign=$(git config --get commit.gpgsign 2>/dev/null || echo '<unset>')
   
-  if [[ "$current_name" == "$git_name" ]] && [[ "$current_email" == "$git_email" ]]; then
-    echo "  ✓ user.name  = $current_name"
-    echo "  ✓ user.email = $current_email"
+  local name_ok=false
+  local email_ok=false
+  
+  if [[ "$current_name" == "$git_name" ]]; then
+    echo "  ${GREEN}✓${RESET} user.name:  $current_name"
+    name_ok=true
   else
-    echo "  ⚠️  user.name  = $current_name (should be: $git_name)"
-    echo "  ⚠️  user.email = $current_email (should be: $git_email)"
+    echo "  ${YELLOW}⚠️${RESET} user.name:  $current_name"
+    echo "     ${YELLOW}Expected: $git_name${RESET}"
+  fi
+  
+  if [[ "$current_email" == "$git_email" ]]; then
+    echo "  ${GREEN}✓${RESET} user.email: $current_email"
+    email_ok=true
+  else
+    echo "  ${YELLOW}⚠️${RESET} user.email: $current_email"
+    echo "     ${YELLOW}Expected: $git_email${RESET}"
+  fi
+  
+  echo "  ${CYAN}○${RESET} gpgsign:    $current_gpgsign"
+  echo ""
+  
+  # Footer with suggestions
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  
+  if [[ "$name_ok" == false ]] || [[ "$email_ok" == false ]]; then
     echo ""
     echo "Run 'gh account-guard fix' to update git identity"
   fi
-  echo "  gpgsign    = $(git config --get commit.gpgsign || echo '<unset>')"
 }
 
