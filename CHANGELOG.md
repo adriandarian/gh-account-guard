@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2024-12-22
+
+### Added
+- **Path management commands** - New `gh ag path add` and `gh ag path remove` commands for easily adding/removing paths from profiles without manual YAML editing
+
+### Changed
+- **Improved status command UI** - Streamlined output with better profile matching messages and visual styling
+- **Removed gum dependency** - Disabled gum integration due to compatibility issues with environment variables; extension now uses native bash ANSI styling
+- **Updated documentation** - Removed yq references (not needed), updated optional dependencies section
+
+### Fixed
+- Removed yq version reference from bug report template (yq was never required)
+- Fixed compatibility issues with gum library conflicting with BOLD environment variable
+
 ## [1.0.0] - 2025-11-23
 
 ### Added
@@ -38,5 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Users configure their own profiles via interactive setup
 - No sensitive data stored in the codebase
 
+[1.1.0]: https://github.com/adriandarian/gh-account-guard/releases/tag/v1.1.0
 [1.0.0]: https://github.com/adriandarian/gh-account-guard/releases/tag/v1.0.0
 
