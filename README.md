@@ -50,14 +50,9 @@ gh extension install .
 
 ### Optional UI Enhancements
 
-For a more beautiful and interactive experience, install these optional tools:
+For interactive selection menus, you can optionally install:
 
-- **[gum](https://github.com/charmbracelet/gum)** - Beautiful CLI prompts and interactive menus (highly recommended!)
-  - macOS: `brew install gum`
-  - Makes prompts, selects, and confirmations much prettier
-  - The extension automatically detects and uses `gum` if available
-
-- **[fzf](https://github.com/junegunn/fzf)** - Fuzzy finder for interactive selection (highly recommended for menus!)
+- **[fzf](https://github.com/junegunn/fzf)** - Fuzzy finder for interactive selection (recommended for menus!)
   - macOS: `brew install fzf`
   - Provides beautiful arrow-key navigation menus
   - Arrow keys: navigate, Enter: select, Esc: cancel
@@ -67,7 +62,7 @@ For a more beautiful and interactive experience, install these optional tools:
   - macOS: `brew install bat`
   - Makes config files easier to read
 
-**Note:** All UI enhancements are optional. The extension works perfectly fine without them, but they make the experience much nicer!
+**Note:** All UI enhancements are optional. The extension works perfectly fine without them using native bash menus and ANSI styling.
 
 **Zero Dependencies:** This extension uses pure bash YAML parsing and requires no external tools beyond `git` and `gh` (which are needed for the tool's core functionality).
 
@@ -127,6 +122,7 @@ For a more beautiful and interactive experience, install these optional tools:
 - `gh account-guard edit` - Interactive editor to modify existing profile configurations
 - `gh account-guard init` - Create example config template file
 - `gh account-guard config` - Manage extension settings (default directory, etc.)
+- `gh account-guard path` - Add or remove paths from profiles (`path add`, `path remove`)
 - `gh account-guard status` - Show which profile matches current directory and current gh/git identity
 - `gh account-guard fix` - Apply matching profile to current repo (git config, signing)
 - `gh account-guard switch` - Run `gh auth switch` to the matching profile

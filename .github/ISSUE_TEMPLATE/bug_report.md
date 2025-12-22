@@ -25,7 +25,6 @@ A clear and concise description of what actually happened.
 - Shell: [e.g., zsh, bash, fish]
 - GitHub CLI version: [e.g., gh version 2.40.0]
 - gh-account-guard version: [if known]
-- yq version: [e.g., yq version 4.40.0]
 
 ## Configuration
 Please share your config (redact sensitive info like emails/usernames):
