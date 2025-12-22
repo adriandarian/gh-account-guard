@@ -23,6 +23,7 @@ gh account-guard <command>
 Commands:
   setup                Interactive setup wizard to configure profiles
   edit                 Interactive editor to modify existing profile configurations
+  path                 Add or remove paths from profiles (path add, path remove)
   init                 Create example config template at ~/.config/gh/account-guard.yml
   config               Manage extension settings (default directory, etc.)
   status               Show which profile matches CWD and current gh/git identity
@@ -41,6 +42,7 @@ main() {
   case "$sub" in
   setup) cmd_setup "$@";;
   edit) cmd_edit "$@";;
+  path) cmd_path "$@";;
   init) cmd_init "$@";;
   config) cmd_config "$@";;
   status) cmd_status "$@";;

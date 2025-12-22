@@ -99,10 +99,10 @@ _yaml_count_profiles() {
       # Count only profile entries (lines starting with - at profile level, indent 2)
       # Profile entries are at indent 2 (2 spaces), path array items are deeper
       if [[ "$line" =~ ^[[:space:]]{2}- ]]; then
-        ((count++))
+        ((count++)) || true
         # Track the indent level of profile entries
         profile_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-        ((profile_indent--))
+        ((profile_indent--)) || true
       fi
     fi
   done < "$file"
@@ -132,21 +132,21 @@ _yaml_get_profile_field() {
     local line="${lines[$i]}"
     
     # Skip comments
-    [[ "$line" =~ ^[[:space:]]*# ]] && { ((i++)); continue; }
+    [[ "$line" =~ ^[[:space:]]*# ]] && { ((i++)) || true; continue; }
     
     # Check if we're entering profiles section
     if [[ "$line" =~ ^profiles:[[:space:]]*$ ]]; then
-      ((i++))
+      ((i++)) || true
       continue
     fi
     
     # Check if we're starting a new profile
     if [[ "$line" =~ ^[[:space:]]*- ]]; then
-      ((current_idx++))
+      ((current_idx++)) || true
       if [[ $current_idx -eq $idx ]]; then
         in_profile=true
         indent_level=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-        ((indent_level--))
+        ((indent_level--)) || true
         # Check if name field is on the same line as - (e.g., "- name: value")
         if [[ "$field" == "name" ]] && [[ "$line" =~ name:[[:space:]]*(.+)$ ]]; then
           result="${BASH_REMATCH[1]}"
@@ -157,7 +157,7 @@ _yaml_get_profile_field() {
       else
         in_profile=false
       fi
-      ((i++))
+      ((i++)) || true
       continue
     fi
     
@@ -165,7 +165,7 @@ _yaml_get_profile_field() {
       # Check if we've left this profile (less indentation)
       local line_indent
       line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-      ((line_indent--))
+      ((line_indent--)) || true
       if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
         break
       fi
@@ -176,20 +176,20 @@ _yaml_get_profile_field() {
         # Skip the entire path array
         local path_indent
         path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-        ((i++))
+        ((i++)) || true
         while [[ $i -lt ${#lines[@]} ]]; do
           local path_line="${lines[$i]}"
           local path_line_indent
           path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
-          ((path_line_indent--))
+          ((path_line_indent--)) || true
           if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
             # Reached end of path array, process this line in next iteration
-            ((i--))
+            ((i--)) || true
             break
           fi
-          ((i++))
+          ((i++)) || true
         done
-        ((i++))
+        ((i++)) || true
         continue
       fi
       
@@ -235,12 +235,12 @@ _yaml_get_profile_field() {
           # Entering git section, read next indented lines
           local git_indent
           git_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-          ((i++))
+          ((i++)) || true
           while [[ $i -lt ${#lines[@]} ]]; do
             local git_line="${lines[$i]}"
             local git_line_indent
             git_line_indent=$(echo "$git_line" | sed 's/[^ ].*//' | wc -c)
-            ((git_line_indent--))
+            ((git_line_indent--)) || true
             if [[ $git_line_indent -le $git_indent ]] && [[ ! "$git_line" =~ ^[[:space:]]*$ ]]; then
               break
             fi
@@ -250,7 +250,7 @@ _yaml_get_profile_field() {
               echo "$result"
               return 0
             fi
-            ((i++))
+            ((i++)) || true
           done
         fi
       elif [[ "$field" =~ ^path\[([0-9]+)\]$ ]]; then
@@ -260,15 +260,15 @@ _yaml_get_profile_field() {
           local path_indent
           path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
           local array_idx=0
-          ((i++))
+          ((i++)) || true
           while [[ $i -lt ${#lines[@]} ]]; do
             local path_line="${lines[$i]}"
             local path_line_indent
             path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
-            ((path_line_indent--))
+            ((path_line_indent--)) || true
             if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
               # Reached end of path array, but don't advance i yet - let main loop handle next line
-              ((i--))
+              ((i--)) || true
               break
             fi
             if [[ "$path_line" =~ ^[[:space:]]*-[[:space:]]*\"(.+)\"$ ]] || [[ "$path_line" =~ ^[[:space:]]*-[[:space:]]*(.+)$ ]]; then
@@ -278,9 +278,9 @@ _yaml_get_profile_field() {
                 echo "$result"
                 return 0
               fi
-              ((array_idx++))
+              ((array_idx++)) || true
             fi
-            ((i++))
+            ((i++)) || true
           done
           # Continue processing - don't skip the next line
           continue
@@ -291,19 +291,19 @@ _yaml_get_profile_field() {
         local path_indent
         path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
         local count=0
-        ((i++))
+        ((i++)) || true
         while [[ $i -lt ${#lines[@]} ]]; do
           local path_line="${lines[$i]}"
           local path_line_indent
           path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
-            ((path_line_indent--))
+            ((path_line_indent--)) || true
             if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
               break
             fi
             if [[ "$path_line" =~ ^[[:space:]]*- ]]; then
-              ((count++))
+              ((count++)) || true
             fi
-            ((i++))
+            ((i++)) || true
           done
           echo "$count"
           return 0
@@ -311,7 +311,7 @@ _yaml_get_profile_field() {
       fi
     fi
     
-    ((i++))
+    ((i++)) || true
   done
   
   return 1
@@ -335,30 +335,30 @@ _yaml_get_path_type() {
   
   while [[ $i -lt ${#lines[@]} ]]; do
     local line="${lines[$i]}"
-    [[ "$line" =~ ^[[:space:]]*# ]] && { ((i++)); continue; }
+    [[ "$line" =~ ^[[:space:]]*# ]] && { ((i++)) || true; continue; }
     
     if [[ "$line" =~ ^profiles:[[:space:]]*$ ]]; then
-      ((i++))
+      ((i++)) || true
       continue
     fi
     
     if [[ "$line" =~ ^[[:space:]]*- ]]; then
-      ((current_idx++))
+      ((current_idx++)) || true
       if [[ $current_idx -eq $idx ]]; then
         in_profile=true
         indent_level=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-        ((indent_level--))
+        ((indent_level--)) || true
       else
         in_profile=false
       fi
-      ((i++))
+      ((i++)) || true
       continue
     fi
     
     if [[ "$in_profile" == true ]]; then
       local line_indent
       line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-      ((line_indent--))
+      ((line_indent--)) || true
       if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
         break
       fi
@@ -372,7 +372,7 @@ _yaml_get_path_type() {
       fi
     fi
     
-    ((i++))
+    ((i++)) || true
   done
   
   echo "!!str"
@@ -396,30 +396,30 @@ _yaml_get_path_length() {
   
   while [[ $i -lt ${#lines[@]} ]]; do
     local line="${lines[$i]}"
-    [[ "$line" =~ ^[[:space:]]*# ]] && { ((i++)); continue; }
+    [[ "$line" =~ ^[[:space:]]*# ]] && { ((i++)) || true; continue; }
     
     if [[ "$line" =~ ^profiles:[[:space:]]*$ ]]; then
-      ((i++))
+      ((i++)) || true
       continue
     fi
     
     if [[ "$line" =~ ^[[:space:]]*- ]]; then
-      ((current_idx++))
+      ((current_idx++)) || true
       if [[ $current_idx -eq $idx ]]; then
         in_profile=true
         indent_level=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-        ((indent_level--))
+        ((indent_level--)) || true
       else
         in_profile=false
       fi
-      ((i++))
+      ((i++)) || true
       continue
     fi
     
     if [[ "$in_profile" == true ]]; then
       local line_indent
       line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-      ((line_indent--))
+      ((line_indent--)) || true
       if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
         break
       fi
@@ -429,19 +429,19 @@ _yaml_get_path_length() {
         local path_indent
         path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
         local count=0
-        ((i++))
+        ((i++)) || true
         while [[ $i -lt ${#lines[@]} ]]; do
           local path_line="${lines[$i]}"
           local path_line_indent
           path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
-          ((path_line_indent--))
+          ((path_line_indent--)) || true
           if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
             break
           fi
           if [[ "$path_line" =~ ^[[:space:]]*- ]]; then
-            ((count++))
+            ((count++)) || true
           fi
-          ((i++))
+          ((i++)) || true
         done
         echo "$count"
         return 0
@@ -452,7 +452,7 @@ _yaml_get_path_length() {
       fi
     fi
     
-    ((i++))
+    ((i++)) || true
   done
   
   echo "0"
@@ -508,29 +508,29 @@ yaml_update_profile_field() {
     # Copy comments and empty lines as-is
     if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// }" ]]; then
       echo "$line" >> "$temp_file"
-      ((i++))
+      ((i++)) || true
       continue
     fi
     
     # Check if we're entering profiles section
     if [[ "$line" =~ ^profiles:[[:space:]]*$ ]]; then
       echo "$line" >> "$temp_file"
-      ((i++))
+      ((i++)) || true
       continue
     fi
     
     # Check if we're starting a new profile
     if [[ "$line" =~ ^[[:space:]]*- ]]; then
-      ((current_idx++))
+      ((current_idx++)) || true
       if [[ $current_idx -eq $profile_idx ]]; then
         in_profile=true
         indent_level=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-        ((indent_level--))
+        ((indent_level--)) || true
       else
         in_profile=false
       fi
       echo "$line" >> "$temp_file"
-      ((i++))
+      ((i++)) || true
       continue
     fi
     
@@ -538,14 +538,14 @@ yaml_update_profile_field() {
       # Check if we've left this profile
       local line_indent
       line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-      ((line_indent--))
+      ((line_indent--)) || true
       if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
         # We've left the profile, but field wasn't updated - add it
         if [[ "$field_updated" == false ]]; then
           _yaml_add_missing_field "$temp_file" "$indent_level" "$field" "$new_value"
         fi
         echo "$line" >> "$temp_file"
-        ((i++))
+        ((i++)) || true
         continue
       fi
       
@@ -556,14 +556,14 @@ yaml_update_profile_field() {
         if [[ $line_indent -le $profile_field_indent ]]; then
           echo "    name: \"$new_value\"" >> "$temp_file"
           field_updated=true
-          ((i++))
+          ((i++)) || true
           continue
         fi
       elif [[ "$field" == "gh_username" ]] && [[ "$line" =~ ^[[:space:]]*gh_username:[[:space:]]*(.+)$ ]]; then
         if [[ $line_indent -le $profile_field_indent ]]; then
           echo "    gh_username: \"$new_value\"" >> "$temp_file"
           field_updated=true
-          ((i++))
+          ((i++)) || true
           continue
         fi
       elif [[ "$field" == "remote_match" ]]; then
@@ -572,7 +572,7 @@ yaml_update_profile_field() {
             echo "    remote_match: \"$new_value\"" >> "$temp_file"
           fi
           field_updated=true
-          ((i++))
+          ((i++)) || true
           continue
         elif [[ "$line" =~ ^[[:space:]]*git:[[:space:]]*$ ]] && [[ "$field_updated" == false ]]; then
           # Insert remote_match before git section if it doesn't exist
@@ -581,7 +581,7 @@ yaml_update_profile_field() {
             field_updated=true
           fi
           echo "$line" >> "$temp_file"
-          ((i++))
+          ((i++)) || true
           continue
         fi
       elif [[ "$field" =~ ^git\.(.+)$ ]]; then
@@ -590,13 +590,13 @@ yaml_update_profile_field() {
           echo "$line" >> "$temp_file"
           local git_indent
           git_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
-          ((i++))
+          ((i++)) || true
           local git_field_found=false
           while [[ $i -lt ${#lines[@]} ]]; do
             local git_line="${lines[$i]}"
             local git_line_indent
             git_line_indent=$(echo "$git_line" | sed 's/[^ ].*//' | wc -c)
-            ((git_line_indent--))
+            ((git_line_indent--)) || true
             if [[ $git_line_indent -le $git_indent ]] && [[ ! "$git_line" =~ ^[[:space:]]*$ ]]; then
               # End of git section, add field if not found
               if [[ "$git_field_found" == false ]]; then
@@ -606,7 +606,7 @@ yaml_update_profile_field() {
                   echo "      ${git_field}: \"$new_value\"" >> "$temp_file"
                 fi
               fi
-              ((i--))
+              ((i--)) || true
               break
             fi
             if [[ "$git_line" =~ ^[[:space:]]*${git_field}:[[:space:]]*(.+)$ ]]; then
@@ -620,10 +620,10 @@ yaml_update_profile_field() {
             else
               echo "$git_line" >> "$temp_file"
             fi
-            ((i++))
+            ((i++)) || true
           done
           field_updated=true
-          ((i++))
+          ((i++)) || true
           continue
         fi
       elif [[ "$field" == "path" ]]; then
@@ -633,34 +633,34 @@ yaml_update_profile_field() {
           local path_indent
           path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
           echo "    path: \"$new_value\"" >> "$temp_file"
-          ((i++))
+          ((i++)) || true
           # Skip all array items
           while [[ $i -lt ${#lines[@]} ]]; do
             local path_line="${lines[$i]}"
             local path_line_indent
             path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
-            ((path_line_indent--))
+            ((path_line_indent--)) || true
             if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]]; then
-              ((i--))
+              ((i--)) || true
               break
             fi
-            ((i++))
+            ((i++)) || true
           done
           field_updated=true
-          ((i++))
+          ((i++)) || true
           continue
         elif [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*(.+)$ ]] && [[ $line_indent -le $profile_field_indent ]]; then
           # It's a string - replace it
           echo "    path: \"$new_value\"" >> "$temp_file"
           field_updated=true
-          ((i++))
+          ((i++)) || true
           continue
         fi
       fi
     fi
     
     echo "$line" >> "$temp_file"
-    ((i++))
+    ((i++)) || true
   done
   
   # If field wasn't found and updated, add it at the end of the profile
@@ -701,5 +701,274 @@ _yaml_add_missing_field() {
   elif [[ "$field" == "path" ]]; then
     echo "${indent_spaces}path: \"$new_value\"" >> "$temp_file"
   fi
+}
+
+# Add a path to a profile's path list
+# Converts single path to array if needed
+yaml_add_path_to_profile() {
+  local file="$1"
+  local profile_idx="$2"
+  local new_path="$3"
+  
+  [[ -f "$file" ]] || return 1
+  
+  # Ensure trailing slash for consistency
+  [[ "$new_path" != */ ]] && new_path="${new_path}/"
+  
+  # Read file into array
+  local lines=()
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    lines+=("$line")
+  done < "$file"
+  
+  local temp_file
+  temp_file=$(mktemp)
+  
+  local current_idx=-1
+  local in_profile=false
+  local indent_level=0
+  local i=0
+  local path_handled=false
+  
+  while [[ $i -lt ${#lines[@]} ]]; do
+    local line="${lines[$i]}"
+    
+    # Copy comments and empty lines as-is
+    if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// }" ]]; then
+      echo "$line" >> "$temp_file"
+      ((i++)) || true
+      continue
+    fi
+    
+    # Check if we're entering profiles section
+    if [[ "$line" =~ ^profiles:[[:space:]]*$ ]]; then
+      echo "$line" >> "$temp_file"
+      ((i++)) || true
+      continue
+    fi
+    
+    # Check if we're starting a new profile
+    if [[ "$line" =~ ^[[:space:]]*-[[:space:]] ]]; then
+      ((current_idx++)) || true
+      if [[ $current_idx -eq $profile_idx ]]; then
+        in_profile=true
+        indent_level=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+        ((indent_level--)) || true
+      else
+        in_profile=false
+      fi
+      echo "$line" >> "$temp_file"
+      ((i++)) || true
+      continue
+    fi
+    
+    if [[ "$in_profile" == true ]] && [[ "$path_handled" == false ]]; then
+      local line_indent
+      line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+      ((line_indent--)) || true
+      
+      # Check if we've left this profile
+      if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
+        in_profile=false
+        echo "$line" >> "$temp_file"
+        ((i++)) || true
+        continue
+      fi
+      
+      # Check for path array
+      if [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*$ ]]; then
+        # It's already an array - just add to it
+        echo "$line" >> "$temp_file"
+        local path_indent
+        path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+        ((i++)) || true
+        
+        # Copy existing array items
+        while [[ $i -lt ${#lines[@]} ]]; do
+          local path_line="${lines[$i]}"
+          local path_line_indent
+          path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
+          ((path_line_indent--)) || true
+          
+          if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]] && [[ ! "$path_line" =~ ^[[:space:]]*- ]]; then
+            break
+          fi
+          
+          if [[ "$path_line" =~ ^[[:space:]]*-[[:space:]] ]]; then
+            echo "$path_line" >> "$temp_file"
+          else
+            echo "$path_line" >> "$temp_file"
+          fi
+          ((i++)) || true
+        done
+        
+        # Add the new path
+        echo "      - \"$new_path\"" >> "$temp_file"
+        path_handled=true
+        continue
+      elif [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*\"?([^\"]*)\"?$ ]] || [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*(.+)$ ]]; then
+        # Single path - convert to array
+        local existing_path="${BASH_REMATCH[1]}"
+        existing_path=$(echo "$existing_path" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/")
+        
+        echo "    path:" >> "$temp_file"
+        echo "      - \"$existing_path\"" >> "$temp_file"
+        echo "      - \"$new_path\"" >> "$temp_file"
+        path_handled=true
+        ((i++)) || true
+        continue
+      fi
+    fi
+    
+    echo "$line" >> "$temp_file"
+    ((i++)) || true
+  done
+  
+  mv "$temp_file" "$file"
+  return 0
+}
+
+# Remove a path from a profile's path list
+yaml_remove_path_from_profile() {
+  local file="$1"
+  local profile_idx="$2"
+  local path_to_remove="$3"
+  
+  [[ -f "$file" ]] || return 1
+  
+  # Normalize path for comparison
+  [[ "$path_to_remove" != */ ]] && path_to_remove="${path_to_remove}/"
+  
+  # Read file into array
+  local lines=()
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    lines+=("$line")
+  done < "$file"
+  
+  local temp_file
+  temp_file=$(mktemp)
+  
+  local current_idx=-1
+  local in_profile=false
+  local indent_level=0
+  local i=0
+  local remaining_paths=()
+  
+  while [[ $i -lt ${#lines[@]} ]]; do
+    local line="${lines[$i]}"
+    
+    # Copy comments and empty lines as-is
+    if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "${line// }" ]]; then
+      echo "$line" >> "$temp_file"
+      ((i++)) || true
+      continue
+    fi
+    
+    # Check if we're entering profiles section
+    if [[ "$line" =~ ^profiles:[[:space:]]*$ ]]; then
+      echo "$line" >> "$temp_file"
+      ((i++)) || true
+      continue
+    fi
+    
+    # Check if we're starting a new profile
+    if [[ "$line" =~ ^[[:space:]]*-[[:space:]] ]]; then
+      ((current_idx++)) || true
+      if [[ $current_idx -eq $profile_idx ]]; then
+        in_profile=true
+        indent_level=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+        ((indent_level--)) || true
+      else
+        in_profile=false
+      fi
+      echo "$line" >> "$temp_file"
+      ((i++)) || true
+      continue
+    fi
+    
+    if [[ "$in_profile" == true ]]; then
+      local line_indent
+      line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+      ((line_indent--)) || true
+      
+      # Check if we've left this profile
+      if [[ $line_indent -le $indent_level ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
+        in_profile=false
+        echo "$line" >> "$temp_file"
+        ((i++)) || true
+        continue
+      fi
+      
+      # Check for path array
+      if [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*$ ]]; then
+        local path_indent
+        path_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+        ((i++)) || true
+        
+        remaining_paths=()
+        
+        # Collect paths, skipping the one to remove
+        while [[ $i -lt ${#lines[@]} ]]; do
+          local path_line="${lines[$i]}"
+          local path_line_indent
+          path_line_indent=$(echo "$path_line" | sed 's/[^ ].*//' | wc -c)
+          ((path_line_indent--)) || true
+          
+          if [[ $path_line_indent -le $path_indent ]] && [[ ! "$path_line" =~ ^[[:space:]]*$ ]] && [[ ! "$path_line" =~ ^[[:space:]]*-[[:space:]] ]]; then
+            break
+          fi
+          
+          if [[ "$path_line" =~ ^[[:space:]]*-[[:space:]]*\"?([^\"]*)\"?$ ]]; then
+            local path_val="${BASH_REMATCH[1]}"
+            path_val=$(echo "$path_val" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/")
+            # Normalize for comparison
+            local normalized_path="$path_val"
+            [[ "$normalized_path" != */ ]] && normalized_path="${normalized_path}/"
+            
+            if [[ "$normalized_path" != "$path_to_remove" ]]; then
+              remaining_paths+=("$path_val")
+            fi
+          fi
+          ((i++)) || true
+        done
+        
+        # Write remaining paths
+        if [[ ${#remaining_paths[@]} -eq 0 ]]; then
+          # No paths left - write empty path
+          echo "    path: \"\"" >> "$temp_file"
+        elif [[ ${#remaining_paths[@]} -eq 1 ]]; then
+          # Single path - write as string
+          echo "    path: \"${remaining_paths[0]}\"" >> "$temp_file"
+        else
+          # Multiple paths - write as array
+          echo "    path:" >> "$temp_file"
+          for p in "${remaining_paths[@]}"; do
+            echo "      - \"$p\"" >> "$temp_file"
+          done
+        fi
+        continue
+      elif [[ "$line" =~ ^[[:space:]]*path:[[:space:]]*\"?([^\"]*)\"?$ ]]; then
+        # Single path - check if it matches
+        local existing_path="${BASH_REMATCH[1]}"
+        existing_path=$(echo "$existing_path" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/")
+        local normalized_existing="$existing_path"
+        [[ "$normalized_existing" != */ ]] && normalized_existing="${normalized_existing}/"
+        
+        if [[ "$normalized_existing" == "$path_to_remove" ]]; then
+          # Remove this path (write empty)
+          echo "    path: \"\"" >> "$temp_file"
+        else
+          echo "$line" >> "$temp_file"
+        fi
+        ((i++)) || true
+        continue
+      fi
+    fi
+    
+    echo "$line" >> "$temp_file"
+    ((i++)) || true
+  done
+  
+  mv "$temp_file" "$file"
 }
 

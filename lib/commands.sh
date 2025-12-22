@@ -47,3 +47,6 @@ source "${SCRIPT_DIR}/lib/commands/apply_hook_to_repos.sh"
 
 # shellcheck source=lib/commands/edit.sh
 source "${SCRIPT_DIR}/lib/commands/edit.sh"
+
+# shellcheck source=lib/commands/path.sh
+source "${SCRIPT_DIR}/lib/commands/path.sh"
