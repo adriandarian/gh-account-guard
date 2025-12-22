@@ -10,8 +10,10 @@ need_cmd() {
 }
 
 # Check if optional UI tools are available and usable (for enhanced experience)
+# Disabled: gum has compatibility issues with environment variables (BOLD, etc.)
+# The native bash fallbacks provide equivalent functionality without external deps
 has_gum() { 
-  command -v gum >/dev/null 2>&1 && [ -t 0 ] && [ -t 1 ]
+  return 1
 }
 
 has_fzf() { 
