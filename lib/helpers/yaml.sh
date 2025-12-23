@@ -811,9 +811,11 @@ yaml_add_path_to_profile() {
         local existing_path="${BASH_REMATCH[1]}"
         existing_path=$(echo "$existing_path" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/")
         
-        echo "    path:" >> "$temp_file"
-        echo "      - \"$existing_path\"" >> "$temp_file"
-        echo "      - \"$new_path\"" >> "$temp_file"
+        {
+          echo "    path:"
+          echo "      - \"$existing_path\""
+          echo "      - \"$new_path\""
+        } >> "$temp_file"
         path_handled=true
         ((i++)) || true
         continue

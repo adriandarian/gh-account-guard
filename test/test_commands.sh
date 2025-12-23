@@ -65,7 +65,7 @@ teardown() {
   run cmd_status
   
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "Matched profile"
+  echo "$output" | grep -qi "Matched Profile"
   
   rm -rf "$TEST_DIR"
 }

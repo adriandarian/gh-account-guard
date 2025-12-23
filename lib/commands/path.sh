@@ -300,7 +300,6 @@ cmd_path_remove() {
         [[ "$path_val" != */ ]] && path_val="${path_val}/"
         if [[ "$path_val" == "$path_to_remove" ]]; then
           found_profile_idx=$i
-          found_path_idx=0
           break
         fi
       fi

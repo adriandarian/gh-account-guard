@@ -33,7 +33,6 @@ cmd_status() {
     else
       for ((i=0; i<profile_count; i++)); do
         local profile_name
-        local profile_paths=()
         profile_name=$(yaml_get ".profiles[$i].name" "$CONFIG" 2>/dev/null || echo "")
         
         # Check if path is an array or single value
