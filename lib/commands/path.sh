@@ -274,8 +274,7 @@ cmd_path_remove() {
     
     # Find profile containing this path
     local found_profile_idx=-1
-    local found_path_idx=-1
-    
+
     for ((i=0; i<profile_count; i++)); do
       local path_type
       path_type=$(yaml_get ".profiles[$i].path | type" "$CONFIG" 2>/dev/null || echo "!!str")
@@ -290,7 +289,6 @@ cmd_path_remove() {
           [[ "$path_val" != */ ]] && path_val="${path_val}/"
           if [[ "$path_val" == "$path_to_remove" ]]; then
             found_profile_idx=$i
-            found_path_idx=$j
             break 2
           fi
         done
